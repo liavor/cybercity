@@ -133,6 +133,52 @@
             letter-spacing: 2px; text-transform: uppercase;
         }
 
+        /* --- BOUNTY HUNT HUD --- */
+        #bounty-hud {
+            position: absolute; top: 120px; left: 20px;
+            background: linear-gradient(135deg, rgba(10,0,0,0.7) 0%, rgba(20,5,0,0.8) 100%);
+            backdrop-filter: blur(8px); border: 1px solid rgba(255,100,0,0.4);
+            border-left: 3px solid #ff6600; color: #ffaa44;
+            padding: 14px 18px; z-index: 60; display: none; pointer-events: none;
+            font-family: 'Share Tech Mono', monospace; font-size: 13px; line-height: 1.7;
+            box-shadow: 0 0 20px rgba(255,80,0,0.15); min-width: 220px;
+        }
+        #bounty-hud .bh-title { color: #ff6600; font-size: 11px; letter-spacing: 2px; margin-bottom: 6px; border-bottom: 1px solid rgba(255,100,0,0.3); padding-bottom: 5px; }
+        #bounty-hud .bh-target { color: #ffdd88; font-size: 14px; font-weight: bold; margin-bottom: 4px; }
+        #bounty-hud .bh-status { font-size: 12px; }
+        #bounty-hud .bh-status.found { color: #ff4400; text-shadow: 0 0 8px #ff4400; }
+        #bounty-hud .bh-status.hunting { color: #ffaa00; }
+        #bounty-hud .bh-civilians { color: #ff0044; font-size: 12px; margin-top: 4px; }
+        #bounty-hud .bh-civilians.clean { color: #00ff88; }
+        @media (max-width: 768px) { #bounty-hud { top: 160px; left: 10px; font-size: 11px; min-width: 180px; } }
+
+        /* Hedef tespit edildiğinde ekran kenarı uyarısı */
+        #target-lock-overlay {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            box-shadow: inset 0 0 60px rgba(255,80,0,0.0);
+            pointer-events: none; z-index: 4;
+            transition: box-shadow 0.3s;
+        }
+        #target-lock-overlay.locked { box-shadow: inset 0 0 80px rgba(255,60,0,0.35); }
+
+        /* Başarı mesajı */
+        #bounty-success {
+            position: absolute; top: 30%; left: 50%; transform: translateX(-50%);
+            color: #ffaa00; font-size: 26px; font-weight: 700; opacity: 0;
+            transition: opacity 0.3s; z-index: 100; pointer-events: none;
+            text-shadow: 0 0 30px #ff8800; background: rgba(15,8,0,0.9);
+            padding: 18px 36px; border: 1px solid #ff8800; backdrop-filter: blur(8px);
+            letter-spacing: 2px; text-align: center; line-height: 1.5;
+        }
+        #bounty-fail {
+            position: absolute; top: 30%; left: 50%; transform: translateX(-50%);
+            color: #ff0044; font-size: 22px; font-weight: 700; opacity: 0;
+            transition: opacity 0.3s; z-index: 100; pointer-events: none;
+            text-shadow: 0 0 20px #ff0044; background: rgba(20,0,5,0.9);
+            padding: 16px 30px; border: 1px solid #ff0044; backdrop-filter: blur(8px);
+            letter-spacing: 2px; text-align: center; line-height: 1.5;
+        }
+
         #loot-msg {
             position: absolute; top: 60%; left: 50%; transform: translateX(-50%);
             color: #0f0; font-size: 20px; font-weight: 700; opacity: 0;
@@ -155,7 +201,6 @@
         #dash-overlay { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0, 255, 255, 0.05); box-shadow: inset 0 0 100px rgba(0,255,255,0.15); opacity: 0; transition: opacity 0.1s; pointer-events: none; z-index: 4; }
     </style>
 
-    <!-- Kütüphaneler ve Post-Processing Eklentileri (Sıfır Çökme / CDN) -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/postprocessing/EffectComposer.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/postprocessing/RenderPass.js"></script>
@@ -174,6 +219,15 @@
     <div id="dash-overlay"></div>
     <div id="penalty-msg">SİVİL ZAYİATI! -50 KREDİ</div>
     <div id="loot-msg">+ SAĞLIK YENİLENDİ</div>
+    <div id="target-lock-overlay"></div>
+    <div id="bounty-hud">
+        <div class="bh-title">▶ AKTİF KONTRAT: SUİKAST</div>
+        <div class="bh-target" id="bh-target-desc">Hedef tanımlanıyor...</div>
+        <div class="bh-status hunting" id="bh-status">◈ HEDEF ARANIYOR</div>
+        <div class="bh-civilians clean" id="bh-civilians">✓ SİVİL ZAYİATI: YOK</div>
+    </div>
+    <div id="bounty-success">✓ KONTRAT TAMAMLANDI<br><span style="font-size:16px;color:#ffdd88" id="bounty-reward-text">+1500 KREDİ</span></div>
+    <div id="bounty-fail">✗ KONTRAT İPTAL EDİLDİ<br><span style="font-size:14px;color:#ff8888">Sivil Kayıp — Ödeme Yok</span></div>
 
     <div id="ui-layer">
         <div id="top-bar">
@@ -189,7 +243,7 @@
         </div>
 
         <div id="rts-info" class="cyber-panel">
-            [STRATEJİ ONAYLI]<br>> Hedef Seçimi: Tıkla/Dokun<br>> Ateş: Otonom Hedefleme
+            [STRATEJİ ONAYLI]<br>> Hedef/Sürüş: Tıkla/Dokun<br>> Ateş: Otonom Hedefleme
         </div>
 
         <div id="msg-notification" style="display: none;">[ ! ] ŞİFRELİ KONTRAT ALINDI</div>
@@ -226,14 +280,12 @@ async function createAndPlayBGM() {
     const bpm = 105; const beatLen = 60 / bpm; const loopDuration = beatLen * 32; 
     const offCtx = new OfflineAudioContext(2, audioCtx.sampleRate * loopDuration, audioCtx.sampleRate);
     
-    // Ağır Cyberpunk Kick
     for(let i=0; i<32; i++) {
         let t = i * beatLen; let osc = offCtx.createOscillator(); let gain = offCtx.createGain();
         osc.frequency.setValueAtTime(100, t); osc.frequency.exponentialRampToValueAtTime(0.01, t + 0.4);
         gain.gain.setValueAtTime(0.9, t); gain.gain.exponentialRampToValueAtTime(0.01, t + 0.4);
         osc.connect(gain); gain.connect(offCtx.destination); osc.start(t); osc.stop(t+0.4);
     }
-    // Karanlık Mid-Bass
     let bassNotes = [32.70, 32.70, 36.71, 27.50]; 
     for(let i=0; i<128; i++) { 
         let t = i*(beatLen/4); let note = bassNotes[Math.floor(i/32)]; 
@@ -242,7 +294,6 @@ async function createAndPlayBGM() {
         let gain = offCtx.createGain(); gain.gain.setValueAtTime((i%4===0)?0.3:0.6, t); gain.gain.exponentialRampToValueAtTime(0.01, t+(beatLen/4));
         osc.connect(filter); filter.connect(gain); gain.connect(offCtx.destination); osc.start(t); osc.stop(t+(beatLen/4));
     }
-    // Blade Runner Atmosferik Pad
     let padNotes = [ [130.81, 155.56, 196.00], [130.81, 155.56, 196.00], [146.83, 174.61, 220.00], [110.00, 130.81, 164.81] ];
     for(let i=0; i<4; i++) {
         let t = i*(beatLen*8); let chord = padNotes[i];
@@ -283,7 +334,25 @@ window.onload = function() {
         { sender: "KuroNet Corp", title: "Araçlı Soygun", text: "Hedefler çok hızlı. Altına bir Hover-Car çek ve onları avla.", target: 7 },
         { sender: "Anon_Gölge", title: "Kaldırım Avı", text: "Devriyeler çok ses çıkarıyor. İşimi yapamıyorum. Sayılarını azalt.", target: 8 },
         { sender: "Alt_Echo", title: "Sistematik Hata", text: "Organik hedefler veri akışımı engelliyor. Siviller masum, sadece çeteleri temizle.", target: 10 },
+        { 
+            sender: "Hayalet_Komisyon", title: "// GİZLİ SUİKAST //",
+            text: "Endüstri bölgesinde bir hedef dolaşıyor. Yanından geçen kalabalık onun kalkanı. Sabrın ve tetik disiplinin test edilecek. Tek kurşun, tek hedef. Sıfır yan kayıp.",
+            target: 1,
+            type: 'bounty',
+            reward: 1500,
+            clue: "KIRMIZI CEKETLİ, ENDÜSTRİ BÖLGESİ",
+            clueDetail: "Endüstri bölgesinde (kuzeyde) kırmızı-turuncu renkte bir sivil gibi görünen hedef. Etrafındaki sivillere zarar verme."
+        },
         { sender: "Kızıl Devre", title: "Kanlı Çipler", text: "Kaldırımdaki serserileri hallet. Araçla ezmek de serbest!", target: 12 },
+        { 
+            sender: "Kuro_Shinigami", title: "// ELİT İMHA //",
+            text: "Plaza bölgesinde korumalı biri geziniyor. Cebi dolu, kalabalığın içinde saklı. Sadece o. Bir tane fazla kurşun tüm ödemeyi siler.",
+            target: 1,
+            type: 'bounty',
+            reward: 2500,
+            clue: "MAVİ TAKİM ELBİSELİ, PLAZA BÖLGESİ",
+            clueDetail: "Plaza bölgesinde (güneyde) parlak mavi renkte bir hedef. Korumalı ve hızlı. Sivil kayıp = kontrat iptal."
+        },
         { sender: "Fixer_0x99", title: "Geri Ödeme", text: "Borçlularım parayı vermedi. Onları bu insan seli içinde bul.", target: 15 }
     ];
 
@@ -293,7 +362,13 @@ window.onload = function() {
         moveJoy: { x: 0, y: 0 }, isShooting: false, lastTime: Date.now(),
         playerHealth: 100, shakeTime: 0, lastShot: 0, contractIndex: -1, currentKills: 0, isPaused: false,
         wantedLevel: 0, isDashing: false, dashTimer: 0, dashCooldown: 0,
-        isDriving: false, currentVehicle: null, carSpeedRaw: 0
+        isDriving: false, currentVehicle: null, carSpeedRaw: 0,
+        // --- BOUNTY HUNT STATE ---
+        bountyActive: false,
+        bountyTarget: null,        // Three.js mesh of the marked target
+        bountyTargetFound: false,  // Has player gotten close enough to "spot" it?
+        bountyCivilianKilled: false, // Contract breaker flag
+        bountyCompleted: false
     };
 
     const _vDir = new THREE.Vector3(); const _vPos = new THREE.Vector3(); const _vOld = new THREE.Vector3();
@@ -302,14 +377,13 @@ window.onload = function() {
     const container = document.getElementById('game-container');
     const scene = new THREE.Scene(); 
     
-    // YENİ: Sis ve Atmosfer Rengi UE5 hissiyatına (Volumetrik algı) uygun derin mavi/mor yapıldı.
     scene.background = new THREE.Color(0x02040a); 
     scene.fog = new THREE.FogExp2(0x02040a, 0.005); 
 
-    const camera = new THREE.PerspectiveCamera(65, window.innerWidth / window.innerHeight, 0.1, 500); 
+    // GÖRÜŞ MESAFESİ (FAR) 1000 YAPILDI Kİ AY GÖRÜNÜP TIKLANABİLSİN
+    const camera = new THREE.PerspectiveCamera(65, window.innerWidth / window.innerHeight, 0.1, 1000); 
     camera.rotation.order = 'YXZ'; 
 
-    // YENİ: Fotorealizm Optimizasyonu (PBR ve Işık patlamaları için ACESFilmic)
     const renderer = new THREE.WebGLRenderer({ antialias: false, powerPreference: "high-performance" }); 
     renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1)); 
     renderer.setSize(window.innerWidth, window.innerHeight); 
@@ -318,73 +392,78 @@ window.onload = function() {
     renderer.toneMappingExposure = 1.2;
     container.appendChild(renderer.domElement);
 
-    // YENİ: POST-PROCESSING (UNREAL BLOOM) - Fotogerçekçi Neon Parlaması
     let composer, bloomPass;
     try {
         const renderScene = new THREE.RenderPass(scene, camera);
-        // Çözünürlüğü mobilde düşük tutarak performansı koruyoruz
         const bloomRes = GAME.isMobile ? new THREE.Vector2(window.innerWidth/2, window.innerHeight/2) : new THREE.Vector2(window.innerWidth, window.innerHeight);
-        bloomPass = new THREE.UnrealBloomPass(bloomRes, 1.8, 0.5, 0.2); // Strength, radius, threshold
+        bloomPass = new THREE.UnrealBloomPass(bloomRes, 1.8, 0.5, 0.2);
         composer = new THREE.EffectComposer(renderer);
-        composer.addPass(renderScene);
-        composer.addPass(bloomPass);
-    } catch(e) {
-        console.warn("Bloom Pass yüklenemedi, varsayılan render kullanılacak.", e);
-        composer = null;
-    }
+        composer.addPass(renderScene); composer.addPass(bloomPass);
+    } catch(e) { composer = null; }
 
-    // Işıkları kıstık çünkü Bloom karanlıkta neonları patlatacak
     const ambientLight = new THREE.AmbientLight(0xffffff, 0.2); scene.add(ambientLight);
     const dirLight = new THREE.DirectionalLight(0x4466ff, 0.5); dirLight.position.set(20, 100, 20); scene.add(dirLight);
 
     const worldGroup = new THREE.Group(); scene.add(worldGroup); const floorMeshes = []; 
 
-    // --- PROSEDÜREL DOKULAR (Islak, Yansıtıcı Asfalt ve Yaşayan Binalar) ---
+    // --- YILDIZLAR VE DOLUNAY (EASTER EGG) ---
+    const starGeo = new THREE.BufferGeometry();
+    const starCount = 600;
+    const starPos = new Float32Array(starCount * 3);
+    for(let i=0; i<starCount; i++) {
+        starPos[i*3] = (Math.random() - 0.5) * 2000;
+        starPos[i*3+1] = 100 + Math.random() * 800; // Sadece yüksekte
+        starPos[i*3+2] = (Math.random() - 0.5) * 2000;
+    }
+    starGeo.setAttribute('position', new THREE.BufferAttribute(starPos, 3));
+    const starMat = new THREE.PointsMaterial({color: 0xffffff, size: 1.2, transparent: true, opacity: 0.8, fog: false});
+    const stars = new THREE.Points(starGeo, starMat);
+    scene.add(stars);
+
+    const moonGeo = new THREE.SphereGeometry(30, 32, 32);
+    const moonMat = new THREE.MeshBasicMaterial({ color: 0xffffee, fog: false }); 
+    const moon = new THREE.Mesh(moonGeo, moonMat);
+    // Ay'ı 1000 Far Clip içine güvenli bir şekilde aldık
+    moon.position.set(100, 250, -400); 
+    scene.add(moon);
+    
+    let moonState = 0;
+    moon.targetScale = 1.0;
+    
+    function handleMoonHit() {
+        moonState++;
+        if(moonState > 3) moonState = 0; 
+        moon.targetScale = 1.0 + (moonState * 0.5); 
+        moon.material.color.setHex(0xffffff); // Geri bildirim parlaması
+        setTimeout(() => { if(moon) moon.material.color.setHex(0xffffee); }, 150);
+    }
+
+    // --- PROSEDÜREL DOKULAR ---
     function createRoadTexture() {
         const canvas = document.createElement('canvas'); canvas.width = 1024; canvas.height = 1024; const ctx = canvas.getContext('2d');
-        
-        ctx.fillStyle = '#080a12'; ctx.fillRect(0, 0, 1024, 1024); // Koyu Asfalt
+        ctx.fillStyle = '#080a12'; ctx.fillRect(0, 0, 1024, 1024); 
         const margin = 170; const blockSizePx = 1024 - (margin * 2);
-        
-        // Kaldırım / Bina Tabanı
         ctx.fillStyle = '#111522'; ctx.fillRect(margin, margin, blockSizePx, blockSizePx);
-        
-        // Su Birikintisi Fakesi (Islak Zemin Çamuru)
         for(let p=0; p<100; p++) {
             ctx.fillStyle = `rgba(0, 50, 100, ${Math.random()*0.1})`;
             ctx.beginPath(); ctx.arc(Math.random()*1024, Math.random()*1024, Math.random()*80+20, 0, Math.PI*2); ctx.fill();
         }
-
-        // Neon Sokak Çizgileri ve Işık Yansımaları (Smeared Reflections)
         ctx.shadowColor = '#00ffff'; ctx.shadowBlur = 30; ctx.strokeStyle = '#00ffff'; ctx.lineWidth = 6; ctx.strokeRect(margin, margin, blockSizePx, blockSizePx);
-        
-        // Asfalta vuran dikey neon yansımaları
         const glow = ctx.createLinearGradient(0, 0, 0, 1024);
         glow.addColorStop(0, 'rgba(0, 255, 255, 0.05)'); glow.addColorStop(0.5, 'rgba(255, 0, 255, 0.15)'); glow.addColorStop(1, 'rgba(0, 255, 255, 0.05)');
         ctx.fillStyle = glow; ctx.fillRect(0, 0, 1024, 1024);
-
-        // Yol Şeritleri
         ctx.shadowColor = '#ff5500'; ctx.shadowBlur = 15; ctx.fillStyle = '#ff8800'; 
         for(let i=64; i<1024; i+=128) { ctx.fillRect(0, i, 8, 64); ctx.fillRect(1016, i, 8, 64); ctx.fillRect(i, 0, 64, 8); ctx.fillRect(i, 1016, 64, 8); }
-        
         const tex = new THREE.CanvasTexture(canvas); tex.wrapS = THREE.RepeatWrapping; tex.wrapT = THREE.RepeatWrapping; return tex;
     }
     
     function createBuildingTexture(hue) {
         const canvas = document.createElement('canvas'); canvas.width = 512; canvas.height = 512; const ctx = canvas.getContext('2d');
         ctx.fillStyle = '#05050a'; ctx.fillRect(0, 0, 512, 512); 
-        
-        // Teknolojik Kablolar ve Borular
         ctx.strokeStyle = '#1a1a1a'; ctx.lineWidth = 4;
         for(let i=0; i<10; i++) { ctx.beginPath(); ctx.moveTo(Math.random()*512, 0); ctx.lineTo(Math.random()*512, 512); ctx.stroke(); }
-
-        // Neon Pencereler
         ctx.fillStyle = `hsl(${hue}, 100%, 60%)`; ctx.shadowBlur = 20; ctx.shadowColor = ctx.fillStyle;
-        for(let x=30; x<512; x+=80) { 
-            for(let y=30; y<512; y+=60) { 
-                if(Math.random() > 0.5) { ctx.fillRect(x, y, 40, 25); } 
-            } 
-        }
+        for(let x=30; x<512; x+=80) { for(let y=30; y<512; y+=60) { if(Math.random() > 0.5) { ctx.fillRect(x, y, 40, 25); } } }
         const tex = new THREE.CanvasTexture(canvas); tex.wrapS = THREE.RepeatWrapping; tex.wrapT = THREE.RepeatWrapping; return tex;
     }
 
@@ -395,16 +474,14 @@ window.onload = function() {
         ctx.beginPath(); ctx.arc(128, 128, 100, 0, Math.PI*2); ctx.stroke();
         ctx.beginPath(); ctx.arc(128, 128, 80, 0, Math.PI*2); ctx.stroke();
         ctx.fillStyle = '#00ffff'; ctx.font = '30px monospace'; ctx.fillText('NEXUS', 85, 135);
-        for(let i=0; i<256; i+=10) { ctx.fillStyle='rgba(0,255,255,0.2)'; ctx.fillRect(0, i, 256, 2); } // Scanlines
+        for(let i=0; i<256; i+=10) { ctx.fillStyle='rgba(0,255,255,0.2)'; ctx.fillRect(0, i, 256, 2); } 
         return new THREE.CanvasTexture(canvas);
     }
 
     const roadTex = createRoadTexture(); roadTex.repeat.set(10, 10); 
-    // YENİ: Tamamen Islak PBR Asfalt
     const roadMat = new THREE.MeshStandardMaterial({ map: roadTex, color: 0xcccccc, roughness: 0.15, metalness: 0.85 });
     const cityFloor = new THREE.Mesh(new THREE.PlaneGeometry(600, 600), roadMat); cityFloor.rotation.x = -Math.PI / 2; cityFloor.position.y = -1; worldGroup.add(cityFloor); floorMeshes.push(cityFloor);
 
-    // Binalar için emissive (Parlayan) materyaller (Bloom'u tetikler)
     const bMatGecekondu = new THREE.MeshStandardMaterial({ map: createBuildingTexture(180), roughness: 0.8, metalness: 0.2, emissive: 0x004444 }); 
     const bMatEndustri = new THREE.MeshStandardMaterial({ map: createBuildingTexture(10), roughness: 0.9, metalness: 0.5, emissive: 0x440000 });  
     const bMatPlaza = new THREE.MeshStandardMaterial({ map: createBuildingTexture(220), roughness: 0.2, metalness: 0.9, emissive: 0x001144 });    
@@ -425,7 +502,6 @@ window.onload = function() {
                 const building = new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1), currentMat); building.scale.set(w, h, d); building.position.set(bX, -1 + h/2, bZ); 
                 worldGroup.add(building); building.updateMatrixWorld(true); obstacles.push(new THREE.Box3().setFromObject(building));
 
-                // YENİ: Çatılara Anten ve Hologram Ekleme
                 if(Math.random() > 0.7) {
                     const antGeo = new THREE.CylinderGeometry(0.1, 0.1, 10); const antMat = new THREE.MeshBasicMaterial({color: 0x222222});
                     const ant = new THREE.Mesh(antGeo, antMat); ant.position.set(bX, -1 + h + 5, bZ); worldGroup.add(ant);
@@ -441,14 +517,11 @@ window.onload = function() {
     }
 
     const vehicles = []; const carGeo = new THREE.BoxGeometry(2.5, 1.0, 5);
-    // Arabalar metalik ve yansıtıcı
     const carMat1 = new THREE.MeshStandardMaterial({color: 0x111122, metalness: 0.9, roughness: 0.2}); 
     const carMat2 = new THREE.MeshStandardMaterial({color: 0x331111, metalness: 0.9, roughness: 0.2});
-    
-    // Değerleri 1'den büyük vererek Bloom'un patlamasını sağlıyoruz
     const glowCyan = new THREE.Color(0, 3, 3); const glowRed = new THREE.Color(3, 0, 0); const noGlow = new THREE.Color(0.1, 0.1, 0.1);
 
-    for(let i=0; i<30; i++) { // Akan Trafik
+    for(let i=0; i<30; i++) { 
         let carGroup = new THREE.Group(); let body = new THREE.Mesh(carGeo, Math.random() > 0.5 ? carMat1 : carMat2); body.position.y = 0.5; carGroup.add(body);
         let fLight = new THREE.Mesh(new THREE.BoxGeometry(2.3, 0.2, 0.2), new THREE.MeshBasicMaterial({color: glowCyan})); fLight.name = "headlight"; fLight.position.set(0, 0.4, -2.5); carGroup.add(fLight);
         let bLight = new THREE.Mesh(new THREE.BoxGeometry(2.3, 0.2, 0.2), new THREE.MeshBasicMaterial({color: glowRed})); bLight.name = "taillight"; bLight.position.set(0, 0.4, 2.5); carGroup.add(bLight);
@@ -460,7 +533,7 @@ window.onload = function() {
         carGroup.position.y = -0.5; scene.add(carGroup); vehicles.push(carGroup);
     }
     
-    for(let i=0; i<20; i++) { // Park Halindeki Araçlar
+    for(let i=0; i<20; i++) { 
         let carGroup = new THREE.Group(); let body = new THREE.Mesh(carGeo, Math.random() > 0.5 ? carMat1 : carMat2); body.position.y = 0.5; carGroup.add(body);
         let fLight = new THREE.Mesh(new THREE.BoxGeometry(2.3, 0.2, 0.2), new THREE.MeshBasicMaterial({color: noGlow})); fLight.name = "headlight"; fLight.position.set(0, 0.4, -2.5); carGroup.add(fLight); 
         let bLight = new THREE.Mesh(new THREE.BoxGeometry(2.3, 0.2, 0.2), new THREE.MeshBasicMaterial({color: noGlow})); bLight.name = "taillight"; bLight.position.set(0, 0.4, 2.5); carGroup.add(bLight);
@@ -471,7 +544,6 @@ window.onload = function() {
         carGroup.position.y = -0.5; scene.add(carGroup); vehicles.push(carGroup);
     }
 
-    // --- OYUNCU ---
     const playerGeo = new THREE.BoxGeometry(1.2, 2.4, 1.2); const playerMat = new THREE.MeshBasicMaterial({ color: glowCyan, wireframe: true });
     const playerMesh = new THREE.Mesh(playerGeo, playerMat); playerMesh.position.set(0, 0.2, 0); scene.add(playerMesh);
     const playerCore = new THREE.Mesh(new THREE.BoxGeometry(1.1, 2.3, 1.1), new THREE.MeshStandardMaterial({ color: 0x002244, metalness: 0.8, roughness: 0.2 })); playerMesh.add(playerCore);
@@ -491,15 +563,23 @@ window.onload = function() {
         const geometry = new THREE.BufferGeometry().setFromPoints(points); const line = new THREE.Line(geometry, material); scene.add(line); visualBeams.push({ mesh: line, life: 0.3 });
     }
 
-    const projectiles = []; const projGeo = new THREE.BoxGeometry(0.15, 0.15, 0.6); // Lazer mermisi gibi uzun ince
+    const projectiles = []; const projGeo = new THREE.BoxGeometry(0.15, 0.15, 0.6); 
     const projMatPlayer = new THREE.MeshBasicMaterial({ color: glowCyan }); const projMatEnemy = new THREE.MeshBasicMaterial({ color: glowRed });
 
     function shoot(origin, direction, isPlayer) {
         const proj = new THREE.Mesh(projGeo, isPlayer ? projMatPlayer : projMatEnemy);
         let safeDir = direction.clone(); proj.position.copy(origin).add(safeDir.multiplyScalar(1.5)); 
-        proj.quaternion.setFromUnitVectors(new THREE.Vector3(0, 0, 1), safeDir); // Mermiyi gidiş yönüne çevir
+        proj.quaternion.setFromUnitVectors(new THREE.Vector3(0, 0, 1), safeDir); 
         proj.velocity = direction.clone().normalize().multiplyScalar(100); proj.isPlayer = isPlayer; proj.life = 1.0; scene.add(proj); projectiles.push(proj);
+        
         if(isPlayer) {
+            // YENİ: Ay (Moon) Vuruş Kontrolü (Easter Egg)
+            const moonRaycaster = new THREE.Raycaster(origin, safeDir);
+            const intersects = moonRaycaster.intersectObject(moon);
+            if(intersects.length > 0) {
+                handleMoonHit();
+            }
+
             playShootSFX(); 
             if(GAME.mode === 'FPS') { muzzleMesh.material.opacity = 1.0; gunGroup.position.z = 0.2; GAME.shakeTime = 0.05; setTimeout(() => { muzzleMesh.material.opacity = 0; }, 40); }
         }
@@ -511,6 +591,157 @@ window.onload = function() {
     const enemyEliteMat = new THREE.MeshBasicMaterial({ color: new THREE.Color(2,0,4), wireframe: false }); 
     const enemyInfectedMat = new THREE.MeshBasicMaterial({ color: new THREE.Color(0,4,0), wireframe: false });
     const civMat = new THREE.MeshBasicMaterial({ color: new THREE.Color(0,2,4), wireframe: true }); 
+
+    // --- BOUNTY TARGET MATERIALS ---
+    // Katı, parlak renkler — wireframe değil, kalabalıktan ayrışsın
+    const bountyTargetMatRed  = new THREE.MeshStandardMaterial({ color: 0x1a0000, emissive: new THREE.Color(2.5, 0.15, 0), roughness: 0.5, metalness: 0.3 });
+    const bountyTargetMatBlue = new THREE.MeshStandardMaterial({ color: 0x00001a, emissive: new THREE.Color(0, 0.4, 3.0), roughness: 0.5, metalness: 0.3 });
+
+    // Kafanın üzerinde dönen "!" işareti hologramı
+    const bountyMarkerGroup = new THREE.Group();
+    // Dikey çubuk "!"
+    const markerBarGeo  = new THREE.BoxGeometry(0.18, 0.55, 0.18);
+    const markerDotGeo  = new THREE.BoxGeometry(0.18, 0.18, 0.18);
+    const markerMatRed  = new THREE.MeshBasicMaterial({ color: new THREE.Color(5, 0.3, 0) });
+    const markerMatBlue = new THREE.MeshBasicMaterial({ color: new THREE.Color(0, 1, 5) });
+    let bountyMarkerMat = markerMatRed; // başlangıç rengi, kontratta güncellenir
+    const markerBar  = new THREE.Mesh(markerBarGeo,  bountyMarkerMat);
+    const markerDot  = new THREE.Mesh(markerDotGeo,  bountyMarkerMat);
+    markerBar.position.y  = 0.35;
+    markerDot.position.y  = -0.2;
+    bountyMarkerGroup.add(markerBar);
+    bountyMarkerGroup.add(markerDot);
+    bountyMarkerGroup.visible = false;
+    scene.add(bountyMarkerGroup);
+
+    // Zemin halkası — hedef etrafında yavaş dönen ince daire
+    const bountyRingGeo = new THREE.TorusGeometry(1.4, 0.05, 6, 32);
+    const bountyRingMat = new THREE.MeshBasicMaterial({ color: new THREE.Color(4, 0.5, 0), transparent: true, opacity: 0.85 });
+    let bountyRingMesh  = new THREE.Mesh(bountyRingGeo, bountyRingMat);
+    bountyRingMesh.rotation.x = Math.PI / 2; // yatay olsun
+    bountyRingMesh.visible = false;
+    scene.add(bountyRingMesh);
+
+    // --- SUİKAST SPAWNER ---
+    function spawnBountyTarget(contractData) {
+        let isEliteContract = contractData.clue.includes('PLAZA');
+        let spawnZ = isEliteContract ? (-(120 + Math.random() * 80)) : (120 + Math.random() * 80);
+        let spawnX = (Math.random() - 0.5) * 80;
+
+        const target = new THREE.Mesh(npcGeo, isEliteContract ? bountyTargetMatBlue : bountyTargetMatRed);
+        target.isVert      = Math.random() > 0.5;
+        target.direction   = Math.random() > 0.5 ? 1 : -1;
+        target.speed       = 3 + Math.random() * 2;
+        target.position.set(spawnX, 0, spawnZ);
+        target.hp          = isEliteContract ? 150 : 100;
+        target.isBountyTarget = true;
+        target.isElite     = false;
+        target.isInfected  = false;
+        target.infectTimer = 0;
+        target.infectTicks = 0;
+
+        scene.add(target);
+        civilians.push(target);
+        GAME.bountyTarget         = target;
+        GAME.bountyTargetFound    = false;
+        GAME.bountyCivilianKilled = false;
+        GAME.bountyCompleted      = false;
+        GAME.bountyActive         = true;
+
+        // Marker rengini kontratan ayarla
+        let mCol = isEliteContract ? new THREE.Color(0, 1, 5) : new THREE.Color(5, 0.3, 0);
+        markerBar.material = new THREE.MeshBasicMaterial({ color: mCol });
+        markerDot.material = new THREE.MeshBasicMaterial({ color: mCol });
+        bountyRingMat.color.copy(mCol);
+
+        // Markerları baştan gizle — tespit edilince açılır
+        bountyMarkerGroup.visible = false;
+        bountyRingMesh.visible    = false;
+
+        // HUD aç
+        let bhud = document.getElementById('bounty-hud');
+        if(bhud) bhud.style.display = 'block';
+        document.getElementById('bh-target-desc').innerText = contractData.clueDetail || contractData.clue;
+        document.getElementById('bh-status').innerText      = '◈ HEDEF ARANIYOR';
+        document.getElementById('bh-status').className      = 'bh-status hunting';
+        document.getElementById('bh-civilians').innerText   = '✓ SİVİL ZAYİATI: YOK';
+        document.getElementById('bh-civilians').className   = 'bh-civilians clean';
+        document.getElementById('target-lock-overlay').className = '';
+    }
+
+    function updateBountyHUD() {
+        if(!GAME.bountyActive || GAME.bountyCompleted) return;
+        let target = GAME.bountyTarget;
+        if(!target) return;
+
+        let dist = playerMesh.position.distanceTo(target.position);
+
+        // Tespit: 22 birim içine girince marker ve halka açılır
+        if(!GAME.bountyTargetFound && dist < 22) {
+            GAME.bountyTargetFound = true;
+            bountyMarkerGroup.visible = true;
+            bountyRingMesh.visible    = true;
+            document.getElementById('bh-status').innerText  = '🎯 HEDEF TESPİT EDİLDİ — ATEŞ HAZIR';
+            document.getElementById('bh-status').className  = 'bh-status found';
+            document.getElementById('target-lock-overlay').className = 'locked';
+            setTimeout(() => { let el = document.getElementById('target-lock-overlay'); if(el) el.className = ''; }, 1200);
+            showLootMessage("🎯 HEDEF TESPİT EDİLDİ", "#ff6600");
+        }
+
+        // "!" hologramı: hedefin tam üzerinde, yavaşça yükselip alçalır + döner
+        if(GAME.bountyTargetFound && bountyMarkerGroup.visible) {
+            let t = Date.now() * 0.001;
+            bountyMarkerGroup.position.set(
+                target.position.x,
+                target.position.y + 3.2 + Math.sin(t * 2.5) * 0.25,
+                target.position.z
+            );
+            bountyMarkerGroup.rotation.y = t * 1.8;
+            // Nabız: hafif scale
+            let pulse = 0.9 + Math.sin(t * 4) * 0.12;
+            bountyMarkerGroup.scale.set(pulse, pulse, pulse);
+        }
+
+        // Zemin halkası: hedef etrafında döner
+        if(GAME.bountyTargetFound && bountyRingMesh.visible) {
+            bountyRingMesh.position.set(target.position.x, -0.9, target.position.z);
+            bountyRingMesh.rotation.z += 0.025;
+            // Hafif opacity nabzı
+            bountyRingMat.opacity = 0.5 + Math.sin(Date.now() * 0.004) * 0.35;
+        }
+
+        if(GAME.bountyCivilianKilled) {
+            document.getElementById('bh-civilians').innerText  = '✗ SİVİL KAYBI — KONTRAT İPTAL';
+            document.getElementById('bh-civilians').className  = 'bh-civilians';
+        }
+    }
+
+    function onBountyTargetKilled() {
+        if(!GAME.bountyActive || GAME.bountyCompleted) return;
+        GAME.bountyCompleted = true;
+        GAME.bountyActive    = false;
+
+        bountyMarkerGroup.visible = false;
+        bountyRingMesh.visible    = false;
+        document.getElementById('bounty-hud').style.display = 'none';
+        document.getElementById('target-lock-overlay').className = '';
+
+        if(GAME.bountyCivilianKilled) {
+            let failEl = document.getElementById('bounty-fail');
+            if(failEl) { failEl.style.opacity = 1; setTimeout(() => failEl.style.opacity = 0, 3500); }
+            GAME.score = Math.max(0, GAME.score - 200);
+        } else {
+            let c = CONTRACTS[GAME.contractIndex];
+            let reward = c.reward || 1500;
+            GAME.score += reward;
+            if(scoreDisplay) scoreDisplay.innerText = GAME.score.toString().padStart(4, '0');
+            let successEl = document.getElementById('bounty-success');
+            document.getElementById('bounty-reward-text').innerText = `+${reward} KREDİ`;
+            if(successEl) { successEl.style.opacity = 1; setTimeout(() => successEl.style.opacity = 0, 3500); }
+            GAME.currentKills = 1;
+            updateTracker();
+        }
+    }
 
     function spawnEntity(isArray, type, maxCount) {
         if(isArray.length >= maxCount) return; 
@@ -555,23 +786,42 @@ window.onload = function() {
         msgBtn.addEventListener('click', () => {
             msgBtn.style.display = 'none'; GAME.isPaused = true; if(document.pointerLockElement) document.exitPointerLock();
             let c = CONTRACTS[GAME.contractIndex];
-            document.getElementById('c-sender').innerText = c.sender; document.getElementById('c-title').innerText = c.title; document.getElementById('c-body').innerText = c.text; document.getElementById('c-objective').innerText = `HEDEF: ${c.target} Düşman Yok Et`;
+            document.getElementById('c-sender').innerText = c.sender; document.getElementById('c-title').innerText = c.title; document.getElementById('c-body').innerText = c.text;
+            if(c.type === 'bounty') {
+                document.getElementById('c-objective').innerText = `HEDEF: ${c.clue}\n⚠ SİVİL KAYIP = KONTRAT İPTAL`;
+                document.getElementById('c-objective').style.color = '#ff8800';
+            } else {
+                document.getElementById('c-objective').innerText = `HEDEF: ${c.target} Düşman Yok Et`;
+                document.getElementById('c-objective').style.color = '#ffeb3b';
+            }
             if(modal) modal.style.display = 'block';
         });
     }
     if(acceptBtn) {
         acceptBtn.addEventListener('click', () => {
-            if(modal) modal.style.display = 'none'; GAME.isPaused = false; GAME.currentKills = 0; updateTracker();
+            if(modal) modal.style.display = 'none'; GAME.isPaused = false; GAME.currentKills = 0; 
+            let c = CONTRACTS[GAME.contractIndex];
+            if(c.type === 'bounty') {
+                spawnBountyTarget(c);
+            }
+            updateTracker();
             if(GAME.mode === 'FPS' && !GAME.isMobile) document.body.requestPointerLock();
         });
     }
     function updateTracker() {
         if(GAME.contractIndex >= 0 && GAME.contractIndex < CONTRACTS.length) {
             let c = CONTRACTS[GAME.contractIndex];
-            if(objTracker) objTracker.innerText = `GÖREV: ${GAME.currentKills} / ${c.target} İMHA`;
+            if(c.type === 'bounty') {
+                if(objTracker) objTracker.innerText = `SUİKAST: ${c.clue}`;
+            } else {
+                if(objTracker) objTracker.innerText = `GÖREV: ${GAME.currentKills} / ${c.target} İMHA`;
+            }
             if(GAME.currentKills >= c.target) {
                 if(objTracker) objTracker.innerText = "GÖREV TAMAMLANDI. ÜCRET AKTARILIYOR...";
-                GAME.score += 500; if(scoreDisplay) scoreDisplay.innerText = GAME.score.toString().padStart(4, '0'); queueNextContract(); 
+                if(c.type !== 'bounty') {
+                    GAME.score += 500; if(scoreDisplay) scoreDisplay.innerText = GAME.score.toString().padStart(4, '0');
+                }
+                queueNextContract(); 
             }
         }
     }
@@ -684,8 +934,10 @@ window.onload = function() {
     
     document.addEventListener('mousedown', (e) => {
         if (GAME.mode === 'FPS' && !GAME.isMobile && !GAME.isPaused) {
-            if (!isPointerLocked) { if (e.target.closest('.cyber-btn') || e.target.closest('#contract-modal') || e.target.closest('#msg-notification')) return; document.body.requestPointerLock(); } 
-            else GAME.isShooting = true; 
+            if (!isPointerLocked) {
+                if (e.target.closest('.cyber-btn') || e.target.closest('#contract-modal') || e.target.closest('#msg-notification')) return;
+                document.body.requestPointerLock();
+            } else GAME.isShooting = true; 
         } else { handleRTSInteraction(e.clientX, e.clientY, e.target); }
     });
     
@@ -707,6 +959,7 @@ window.onload = function() {
     function toggleMode() {
         if(GAME.isPaused) return; GAME.isShooting = false; 
         let rtsInfo = document.getElementById('rts-info'); let crosshair = document.getElementById('crosshair'); let btnMode = document.getElementById('btn-mode');
+        
         if (GAME.mode === 'RTS') {
             GAME.mode = 'FPS';
             if(rtsInfo) rtsInfo.style.display = 'none'; if(crosshair) crosshair.style.display = 'block'; if(btnMode) btnMode.innerText = 'STRATEJİ [F]';
@@ -750,6 +1003,10 @@ window.onload = function() {
         GAME.score = Math.max(0, GAME.score - 50); GAME.wantedLevel = Math.min(5, GAME.wantedLevel + 1.0); 
         if(scoreDisplay) scoreDisplay.innerText = GAME.score.toString().padStart(4, '0');
         let msg = document.getElementById('penalty-msg'); if(msg) { msg.style.opacity = 1; setTimeout(() => msg.style.opacity = 0, 1500); }
+        // Bounty aktifse sivil kayıp = kontrat bozuldu
+        if(GAME.bountyActive && !GAME.bountyCompleted) {
+            GAME.bountyCivilianKilled = true;
+        }
         setTimeout(() => spawnEntity(civilians, 'civilian', 100), 2000); 
     }
 
@@ -763,6 +1020,11 @@ window.onload = function() {
         requestAnimationFrame(animate);
         const now = Date.now(); let dt = (now - GAME.lastTime) / 1000; if(dt > 0.1) dt = 0.1; GAME.lastTime = now;
         
+        // YENİ: Ay (Moon) Pürüzsüz Büyüme Animasyonu (Lerp)
+        if (typeof moon !== 'undefined') {
+            moon.scale.lerp(new THREE.Vector3(moon.targetScale, moon.targetScale, moon.targetScale), 0.05);
+        }
+
         if(!GAME.isPaused) {
             if(!GAME.isDriving) {
                 let canEnter = false; for(let car of vehicles) { if(playerMesh.position.distanceTo(car.position) < 8) { canEnter = true; break; } }
@@ -771,7 +1033,6 @@ window.onload = function() {
 
             const gameDt = dt * GAME.timeScale; 
 
-            // HOLOGRAN ANİMASYONLARI
             for(let h of holograms) { h.rotation.y += gameDt; h.material.opacity = 0.5 + Math.sin(now*0.005)*0.3; }
 
             if(GAME.isDriving && GAME.currentVehicle) {
@@ -790,7 +1051,13 @@ window.onload = function() {
 
                 if(Math.abs(GAME.carSpeedRaw) > 15) {
                     for(let j=enemies.length-1; j>=0; j--) { if(cv.position.distanceTo(enemies[j].position) < 3.5) { let deathPos = enemies[j].position.clone(); scene.remove(enemies[j]); enemies.splice(j, 1); onEnemyKilled(deathPos); } }
-                    for(let j=civilians.length-1; j>=0; j--) { if(cv.position.distanceTo(civilians[j].position) < 3.5) { scene.remove(civilians[j]); civilians.splice(j, 1); onCivilianKilled(); } }
+                    for(let j=civilians.length-1; j>=0; j--) {
+                        if(cv.position.distanceTo(civilians[j].position) < 3.5) {
+                            let isBounty = civilians[j].isBountyTarget;
+                            scene.remove(civilians[j]); civilians.splice(j, 1);
+                            if(isBounty) { onBountyTargetKilled(); } else { onCivilianKilled(); }
+                        }
+                    }
                 }
                 playerMesh.position.copy(cv.position); playerMesh.rotation.y = cv.rotation.y;
 
@@ -814,7 +1081,12 @@ window.onload = function() {
                     if (dist > 0.5) { _vDir.subVectors(playerTargetPos, playerMesh.position); _vDir.y = 0; if(_vDir.lengthSq() > 0) { _vDir.normalize(); playerMesh.position.add(_vDir.multiplyScalar(speed)); playerMesh.lookAt(playerTargetPos); } if(checkCollision(playerMesh.position, playerRadius)) { playerMesh.position.copy(oldPos); playerTargetPos.copy(oldPos); } }
                     if(enemies.length > 0 && Math.random() < 0.08 * GAME.timeScale) {
                         let closest = null, minDist = Infinity; for(let i=0; i<enemies.length; i++) { let d = playerMesh.position.distanceTo(enemies[i].position); if(d < 40 && d < minDist) { minDist = d; closest = enemies[i]; } }
-                        if(closest) { _vDir.subVectors(closest.position, playerMesh.position); _vDir.y += 0.5; if(_vDir.lengthSq() > 0) { _vDir.normalize(); shoot(playerMesh.position.clone().add(new THREE.Vector3(0, 1.2, 0)), _vDir, true); playerMesh.lookAt(new THREE.Vector3(closest.position.x, playerMesh.position.y, closest.position.z)); } }
+                        if(closest) {
+                            let origin = playerMesh.position.clone().add(new THREE.Vector3(0, 1.2, 0));
+                            let aimTarget = closest.position.clone().add(new THREE.Vector3(0, 1.0, 0));
+                            _vDir.subVectors(aimTarget, origin);
+                            if(_vDir.lengthSq() > 0) { _vDir.normalize(); shoot(origin, _vDir, true); playerMesh.lookAt(new THREE.Vector3(closest.position.x, playerMesh.position.y, closest.position.z)); }
+                        }
                     }
                     let camTarget = new THREE.Vector3(playerMesh.position.x, playerMesh.position.y + 35, playerMesh.position.z + 25); camera.position.lerp(camTarget, 0.05); camera.lookAt(playerMesh.position);
                 } else if (GAME.mode === 'FPS') {
@@ -850,6 +1122,9 @@ window.onload = function() {
                 c.rotation.y = c.isVert ? (c.direction === 1 ? 0 : Math.PI) : (c.direction === 1 ? Math.PI/2 : -Math.PI/2); c.position.y = 0 + Math.sin(now * 0.005 + c.position.x + c.position.z) * 0.1; 
             }
 
+            // Bounty hunt sistemi güncelle
+            if(GAME.bountyActive) updateBountyHUD();
+
             if(coordDisplay) coordDisplay.innerText = `${Math.floor(playerMesh.position.x)}, ${Math.floor(playerMesh.position.z)}`;
             
             for (let i = projectiles.length - 1; i >= 0; i--) {
@@ -866,7 +1141,15 @@ window.onload = function() {
                         }
                         if (!hit) {
                             for(let j=civilians.length-1; j>=0; j--) {
-                                if(p.position.distanceTo(civilians[j].position) < 1.5) { civilians[j].hp -= (GAME.mode === 'FPS' ? 100 : 50); hit = true; if(civilians[j].hp <= 0) { scene.remove(civilians[j]); civilians.splice(j, 1); onCivilianKilled(); } break; }
+                                if(p.position.distanceTo(civilians[j].position) < 1.5) {
+                                    civilians[j].hp -= (GAME.mode === 'FPS' ? 100 : 50); hit = true; 
+                                    if(civilians[j].hp <= 0) {
+                                        let isBounty = civilians[j].isBountyTarget;
+                                        scene.remove(civilians[j]); civilians.splice(j, 1);
+                                        if(isBounty) { onBountyTargetKilled(); } else { onCivilianKilled(); }
+                                    }
+                                    break;
+                                }
                             }
                         }
                     } else {
@@ -894,6 +1177,7 @@ window.onload = function() {
                         if(e.infectTicks >= 5) { e.isInfected = false; e.material = e.isElite ? enemyEliteMat : enemyMat; }
                     }
                 }
+
                 _vDir.subVectors(playerMesh.position, e.position); _vDir.y = 0; let dist = playerMesh.position.distanceTo(e.position);
                 if (dist > 25) { 
                     if (e.isVert) { e.position.z += e.direction * e.speed * gameDt; if (e.position.z > 280 || e.position.z < -280) e.direction *= -1; } else { e.position.x += e.direction * e.speed * gameDt; if (e.position.x > 280 || e.position.x < -280) e.direction *= -1; }
