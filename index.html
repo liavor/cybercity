@@ -199,6 +199,58 @@
         #damage-overlay { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: radial-gradient(circle, transparent 30%, rgba(255,0,0,0.6) 100%); opacity: 0; transition: opacity 0.1s; pointer-events: none; z-index: 6; }
         #hack-overlay { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0, 255, 0, 0.05); box-shadow: inset 0 0 80px rgba(0,255,0,0.2); opacity: 0; transition: opacity 0.3s; pointer-events: none; z-index: 4; }
         #dash-overlay { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0, 255, 255, 0.05); box-shadow: inset 0 0 100px rgba(0,255,255,0.15); opacity: 0; transition: opacity 0.1s; pointer-events: none; z-index: 4; }
+
+        /* --- VERİ KAÇIRMA HUD --- */
+        #datarun-hud {
+            position: absolute; bottom: 100px; left: 50%; transform: translateX(-50%);
+            background: linear-gradient(135deg, rgba(0,5,20,0.85) 0%, rgba(0,15,40,0.9) 100%);
+            backdrop-filter: blur(12px); border: 1px solid rgba(0,200,255,0.35);
+            border-top: 3px solid #00ccff; color: #aaddff;
+            padding: 14px 24px 10px 24px; z-index: 60; display: none; pointer-events: none;
+            font-family: 'Share Tech Mono', monospace; min-width: 320px; text-align: center;
+            box-shadow: 0 0 30px rgba(0,150,255,0.2);
+        }
+        #datarun-hud .dr-title { color: #00ccff; font-size: 10px; letter-spacing: 3px; margin-bottom: 8px; }
+        #datarun-hud .dr-phase { font-size: 15px; font-weight: bold; color: #fff; margin-bottom: 8px; letter-spacing: 1px; }
+        #datarun-timer-wrap { width: 100%; height: 5px; background: rgba(0,200,255,0.15); border-radius: 2px; overflow: hidden; margin-bottom: 6px; }
+        #datarun-timer-bar { height: 100%; width: 100%; background: #00ccff; box-shadow: 0 0 10px #00ccff; transition: background 0.5s; border-radius: 2px; }
+        #datarun-timer-bar.warning { background: #ffaa00; box-shadow: 0 0 10px #ffaa00; }
+        #datarun-timer-bar.critical { background: #ff0044; box-shadow: 0 0 10px #ff0044; }
+        #datarun-time-text { font-size: 22px; color: #00ccff; font-weight: bold; letter-spacing: 2px; text-shadow: 0 0 10px rgba(0,200,255,0.6); }
+        #datarun-time-text.warning { color: #ffaa00; text-shadow: 0 0 10px rgba(255,170,0,0.6); }
+        #datarun-time-text.critical { color: #ff0044; text-shadow: 0 0 15px rgba(255,0,68,0.8); }
+        #datarun-hint { font-size: 11px; color: #558899; margin-top: 4px; letter-spacing: 1px; }
+        @media (max-width: 768px) { #datarun-hud { bottom: 140px; min-width: 260px; font-size: 12px; } }
+
+        /* A noktası pickup beacon CSS animasyonu */
+        @keyframes beacon-pulse { 0%,100% { opacity: 1; transform: scale(1); } 50% { opacity: 0.4; transform: scale(1.15); } }
+
+        /* Kovalama başladığında kırmızı kenarlık */
+        #chase-overlay {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            box-shadow: inset 0 0 0px rgba(255,0,68,0);
+            pointer-events: none; z-index: 4; transition: box-shadow 0.4s;
+        }
+        #chase-overlay.active { box-shadow: inset 0 0 90px rgba(255,0,50,0.45); animation: chase-pulse 1.2s ease-in-out infinite; }
+        @keyframes chase-pulse { 0%,100% { box-shadow: inset 0 0 90px rgba(255,0,50,0.45); } 50% { box-shadow: inset 0 0 60px rgba(255,0,50,0.2); } }
+
+        /* Başarı / başarısız ekran mesajları */
+        #datarun-success {
+            position: absolute; top: 28%; left: 50%; transform: translateX(-50%);
+            color: #00ffcc; font-size: 28px; font-weight: 700; opacity: 0;
+            transition: opacity 0.4s; z-index: 110; pointer-events: none;
+            text-shadow: 0 0 30px #00ffcc; background: rgba(0,15,20,0.95);
+            padding: 20px 40px; border: 1px solid #00ffcc; backdrop-filter: blur(10px);
+            letter-spacing: 2px; text-align: center; line-height: 1.6;
+        }
+        #datarun-fail {
+            position: absolute; top: 28%; left: 50%; transform: translateX(-50%);
+            color: #ff2255; font-size: 24px; font-weight: 700; opacity: 0;
+            transition: opacity 0.4s; z-index: 110; pointer-events: none;
+            text-shadow: 0 0 20px #ff2255; background: rgba(20,0,8,0.95);
+            padding: 18px 36px; border: 1px solid #ff2255; backdrop-filter: blur(10px);
+            letter-spacing: 2px; text-align: center; line-height: 1.6;
+        }
     </style>
 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
@@ -228,6 +280,18 @@
     </div>
     <div id="bounty-success">✓ KONTRAT TAMAMLANDI<br><span style="font-size:16px;color:#ffdd88" id="bounty-reward-text">+1500 KREDİ</span></div>
     <div id="bounty-fail">✗ KONTRAT İPTAL EDİLDİ<br><span style="font-size:14px;color:#ff8888">Sivil Kayıp — Ödeme Yok</span></div>
+    <div id="chase-overlay"></div>
+
+    <!-- VERİ KAÇIRMA HUD -->
+    <div id="datarun-hud">
+        <div class="dr-title">▶ AKTİF MİSYON: VERİ KAÇIRMA</div>
+        <div class="dr-phase" id="dr-phase">A NOKTASINA GİT</div>
+        <div id="datarun-timer-wrap"><div id="datarun-timer-bar"></div></div>
+        <div id="datarun-time-text">00:00</div>
+        <div class="dr-hint" id="dr-hint">Paketi al — sonra B noktasına kaç</div>
+    </div>
+    <div id="datarun-success">✓ VERİ TESLİM EDİLDİ<br><span style="font-size:16px;color:#88ffdd" id="dr-reward-text">+2000 KREDİ</span><br><span style="font-size:13px;color:#557766">Aranma Seviyesi Sıfırlandı</span></div>
+    <div id="datarun-fail">✗ VERİ PAKETİ KAYIP<br><span style="font-size:14px;color:#ff8899" id="dr-fail-reason">Süre doldu</span></div>
 
     <div id="ui-layer">
         <div id="top-bar">
@@ -353,7 +417,15 @@ window.onload = function() {
             clue: "MAVİ TAKİM ELBİSELİ, PLAZA BÖLGESİ",
             clueDetail: "Plaza bölgesinde (güneyde) parlak mavi renkte bir hedef. Korumalı ve hızlı. Sivil kayıp = kontrat iptal."
         },
-        { sender: "Fixer_0x99", title: "Geri Ödeme", text: "Borçlularım parayı vermedi. Onları bu insan seli içinde bul.", target: 15 }
+        { sender: "Fixer_0x99", title: "Geri Ödeme", text: "Borçlularım parayı vermedi. Onları bu insan seli içinde bul.", target: 15 },
+        {
+            sender: "GH0ST_RUNNER", title: "// VERİ KAÇIRMA //",
+            text: "KuroNet'in sunucusundan bir paket çaldık. Ama kurye ele geçirildi. Paketi endüstri bölgesindeki ölü kutusundan al ve plaza'daki güvenli eve ulaştır. Alarm verildi — peşinde olacaklar. Çatışma yok. Sadece koş.",
+            target: 1,
+            type: 'datarun',
+            reward: 2000,
+            timeLimit: 90
+        }
     ];
 
     const GAME = {
@@ -365,10 +437,16 @@ window.onload = function() {
         isDriving: false, currentVehicle: null, carSpeedRaw: 0,
         // --- BOUNTY HUNT STATE ---
         bountyActive: false,
-        bountyTarget: null,        // Three.js mesh of the marked target
-        bountyTargetFound: false,  // Has player gotten close enough to "spot" it?
-        bountyCivilianKilled: false, // Contract breaker flag
-        bountyCompleted: false
+        bountyTarget: null,
+        bountyTargetFound: false,
+        bountyCivilianKilled: false,
+        bountyCompleted: false,
+        // --- DATARUN STATE ---
+        datarunActive: false,
+        datarunPhase: 'idle',   // 'idle' | 'goto_a' | 'carrying' | 'done'
+        datarunTimeLeft: 90,
+        datarunCompleted: false,
+        datarunChasing: false
     };
 
     const _vDir = new THREE.Vector3(); const _vPos = new THREE.Vector3(); const _vOld = new THREE.Vector3();
@@ -618,11 +696,207 @@ window.onload = function() {
     const bountyRingGeo = new THREE.TorusGeometry(1.4, 0.05, 6, 32);
     const bountyRingMat = new THREE.MeshBasicMaterial({ color: new THREE.Color(4, 0.5, 0), transparent: true, opacity: 0.85 });
     let bountyRingMesh  = new THREE.Mesh(bountyRingGeo, bountyRingMat);
-    bountyRingMesh.rotation.x = Math.PI / 2; // yatay olsun
+    bountyRingMesh.rotation.x = Math.PI / 2;
     bountyRingMesh.visible = false;
     scene.add(bountyRingMesh);
 
-    // --- SUİKAST SPAWNER ---
+    // =====================================================================
+    // --- VERİ KAÇIRMA (DATARUN) SİSTEMİ ---
+    // A noktası = pickup (endüstri), B noktası = teslim (plaza)
+    // =====================================================================
+    const DR_A_POS = new THREE.Vector3(40, 0, 140);   // Endüstri kuzeyi
+    const DR_B_POS = new THREE.Vector3(-50, 0, -160);  // Plaza güneyi
+
+    // --- A Noktası: parlayan veri kasası beacon ---
+    const drBeaconGeoA = new THREE.BoxGeometry(1.2, 1.2, 1.2);
+    const drBeaconMatA = new THREE.MeshBasicMaterial({ color: new THREE.Color(0, 3, 4), wireframe: true });
+    const drBeaconA = new THREE.Mesh(drBeaconGeoA, drBeaconMatA);
+    drBeaconA.position.copy(DR_A_POS); drBeaconA.position.y = 0.6;
+    drBeaconA.visible = false; scene.add(drBeaconA);
+
+    // A etrafında yükselen ışık sütunu (ince silindir)
+    const drPillarGeoA = new THREE.CylinderGeometry(0.08, 0.5, 12, 8, 1, true);
+    const drPillarMatA = new THREE.MeshBasicMaterial({ color: new THREE.Color(0, 2, 3), transparent: true, opacity: 0.35, side: THREE.DoubleSide });
+    const drPillarA = new THREE.Mesh(drPillarGeoA, drPillarMatA);
+    drPillarA.position.copy(DR_A_POS); drPillarA.position.y = 6;
+    drPillarA.visible = false; scene.add(drPillarA);
+
+    // --- B Noktası: teslim noktası beacon (yeşil) ---
+    const drBeaconGeoB = new THREE.BoxGeometry(1.4, 1.4, 1.4);
+    const drBeaconMatB = new THREE.MeshBasicMaterial({ color: new THREE.Color(0, 4, 1), wireframe: true });
+    const drBeaconB = new THREE.Mesh(drBeaconGeoB, drBeaconMatB);
+    drBeaconB.position.copy(DR_B_POS); drBeaconB.position.y = 0.7;
+    drBeaconB.visible = false; scene.add(drBeaconB);
+
+    const drPillarGeoB = new THREE.CylinderGeometry(0.08, 0.5, 12, 8, 1, true);
+    const drPillarMatB = new THREE.MeshBasicMaterial({ color: new THREE.Color(0, 3, 0.5), transparent: true, opacity: 0.35, side: THREE.DoubleSide });
+    const drPillarB = new THREE.Mesh(drPillarGeoB, drPillarMatB);
+    drPillarB.position.copy(DR_B_POS); drPillarB.position.y = 6;
+    drPillarB.visible = false; scene.add(drPillarB);
+
+    // Oyuncunun üzerindeyken görünen "paket taşıyorum" halkası
+    const drCarryRingGeo = new THREE.TorusGeometry(1.0, 0.07, 6, 28);
+    const drCarryRingMat = new THREE.MeshBasicMaterial({ color: new THREE.Color(0, 3, 4), transparent: true, opacity: 0.9 });
+    const drCarryRing = new THREE.Mesh(drCarryRingGeo, drCarryRingMat);
+    drCarryRing.rotation.x = Math.PI / 2; drCarryRing.visible = false; scene.add(drCarryRing);
+
+    let drTimerInterval = null;
+
+    function startDatarun(contractData) {
+        GAME.datarunActive    = true;
+        GAME.datarunPhase     = 'goto_a';
+        GAME.datarunTimeLeft  = contractData.timeLimit || 90;
+        GAME.datarunCompleted = false;
+        GAME.datarunChasing   = false;
+
+        // Beaconları göster
+        drBeaconA.visible  = true; drPillarA.visible  = true;
+        drBeaconB.visible  = false; drPillarB.visible = false;
+        drCarryRing.visible = false;
+
+        // HUD
+        let hud = document.getElementById('datarun-hud');
+        if(hud) hud.style.display = 'block';
+        _drUpdateHUDPhase('goto_a');
+        _drUpdateTimerUI();
+
+        // Countdown
+        if(drTimerInterval) clearInterval(drTimerInterval);
+        drTimerInterval = setInterval(() => {
+            if(!GAME.datarunActive || GAME.datarunPhase === 'idle' || GAME.datarunCompleted) { clearInterval(drTimerInterval); return; }
+            GAME.datarunTimeLeft -= 1;
+            _drUpdateTimerUI();
+            if(GAME.datarunTimeLeft <= 0) { clearInterval(drTimerInterval); _drFail('Süre doldu — paket imha edildi'); }
+        }, 1000);
+    }
+
+    function _drUpdateHUDPhase(phase) {
+        let phaseEl = document.getElementById('dr-phase');
+        let hintEl  = document.getElementById('dr-hint');
+        if(phase === 'goto_a') {
+            if(phaseEl) phaseEl.innerText = '▶ A NOKTASI: PAKETİ AL';
+            if(hintEl)  hintEl.innerText  = 'Endüstri bölgesinde mavi ışık sütununa koş';
+        } else if(phase === 'carrying') {
+            if(phaseEl) { phaseEl.innerText = '🔴 TAŞIYORSİN — B NOKTASINA KAÇ'; phaseEl.style.color = '#ff6644'; }
+            if(hintEl)  hintEl.innerText = '[Q] Zamanı Yavaşlat • Binalardan sıyrıl';
+        }
+        if(objTracker) objTracker.innerText = phase === 'goto_a' ? 'KAÇIRMA: A NOKTASINA GİT' : 'KAÇIRMA: B NOKTASINA TESLİM ET!';
+    }
+
+    function _drUpdateTimerUI() {
+        let t = Math.max(0, GAME.datarunTimeLeft);
+        let limit = (CONTRACTS[GAME.contractIndex] || {}).timeLimit || 90;
+        let pct   = t / limit;
+        let secs  = t % 60; let mins = Math.floor(t / 60);
+        let txt   = `${String(mins).padStart(2,'0')}:${String(secs).padStart(2,'0')}`;
+        let timeEl = document.getElementById('datarun-time-text');
+        let barEl  = document.getElementById('datarun-timer-bar');
+        if(timeEl) { timeEl.innerText = txt; timeEl.className = pct < 0.2 ? 'critical' : (pct < 0.45 ? 'warning' : ''); }
+        if(barEl)  { barEl.style.width = (pct * 100) + '%'; barEl.className = pct < 0.2 ? 'critical' : (pct < 0.45 ? 'warning' : ''); }
+    }
+
+    function _drFail(reason) {
+        if(!GAME.datarunActive || GAME.datarunCompleted) return;
+        GAME.datarunActive = false; GAME.datarunPhase = 'idle'; GAME.datarunCompleted = true;
+        _drCleanup();
+        let failEl = document.getElementById('datarun-fail');
+        let reasonEl = document.getElementById('dr-fail-reason');
+        if(reasonEl) reasonEl.innerText = reason;
+        if(failEl) { failEl.style.opacity = 1; setTimeout(() => failEl.style.opacity = 0, 3500); }
+        // İstihbarat cezası: aranma seviyesi artar
+        GAME.wantedLevel = Math.min(5, GAME.wantedLevel + 2); updateWantedUI();
+        if(objTracker) objTracker.innerText = 'MİSYON BAŞARISIZ. BAĞLANTI KESİLDİ.';
+        queueNextContract();
+    }
+
+    function _drSuccess() {
+        if(!GAME.datarunActive || GAME.datarunCompleted) return;
+        GAME.datarunActive = false; GAME.datarunPhase = 'idle'; GAME.datarunCompleted = true;
+        if(drTimerInterval) clearInterval(drTimerInterval);
+        _drCleanup();
+        let c = CONTRACTS[GAME.contractIndex]; let reward = c.reward || 2000;
+        // Zaman bonusu: kalan her saniye için +10 kredi
+        let bonus = Math.floor(GAME.datarunTimeLeft * 10);
+        reward += bonus;
+        GAME.score += reward; if(scoreDisplay) scoreDisplay.innerText = GAME.score.toString().padStart(4, '0');
+        // Aranma sıfırla
+        GAME.wantedLevel = 0; updateWantedUI();
+        document.getElementById('chase-overlay').className = '';
+        let successEl = document.getElementById('datarun-success');
+        let rewardEl  = document.getElementById('dr-reward-text');
+        if(rewardEl) rewardEl.innerText = `+${reward} KREDİ  (+${bonus} SÜRE BONUSU)`;
+        if(successEl) { successEl.style.opacity = 1; setTimeout(() => successEl.style.opacity = 0, 4000); }
+        GAME.currentKills = 1; updateTracker();
+    }
+
+    function _drCleanup() {
+        drBeaconA.visible = false; drPillarA.visible = false;
+        drBeaconB.visible = false; drPillarB.visible = false;
+        drCarryRing.visible = false;
+        document.getElementById('datarun-hud').style.display = 'none';
+        document.getElementById('chase-overlay').className = '';
+        GAME.datarunChasing = false;
+    }
+
+    function updateDatarun(dt) {
+        if(!GAME.datarunActive || GAME.datarunCompleted) return;
+        let t = Date.now() * 0.001;
+
+        // Beacon'ları animasyon: yavaş döner
+        drBeaconA.rotation.y += dt * 1.5; drBeaconA.rotation.x += dt * 0.8;
+        drBeaconB.rotation.y -= dt * 1.5; drBeaconB.rotation.x -= dt * 0.8;
+        drPillarMatA.opacity = 0.2 + Math.sin(t * 2.5) * 0.15;
+        drPillarMatB.opacity = 0.2 + Math.sin(t * 2.5 + 1.5) * 0.15;
+
+        if(GAME.datarunPhase === 'goto_a') {
+            // A noktasına yakınlık kontrolü
+            let distA = playerMesh.position.distanceTo(DR_A_POS);
+            if(distA < 5) {
+                // Paketi al!
+                GAME.datarunPhase = 'carrying';
+                drBeaconA.visible = false; drPillarA.visible = false;
+                drBeaconB.visible = true;  drPillarB.visible = true;
+                drCarryRing.visible = true;
+                _drUpdateHUDPhase('carrying');
+                showLootMessage("📦 VERİ PAKETİ ALINDI — KAÇIYORSUN!", "#00ccff");
+
+                // Kovalama başlat: çok sayıda elit düşman spawn et
+                GAME.datarunChasing = true;
+                document.getElementById('chase-overlay').className = 'active';
+                GAME.wantedLevel = 5; updateWantedUI();
+                // 8 elit düşman ekle
+                for(let i = 0; i < 8; i++) {
+                    setTimeout(() => {
+                        if(!GAME.datarunActive) return;
+                        let ang = (i / 8) * Math.PI * 2;
+                        let ex = playerMesh.position.x + Math.cos(ang) * 25;
+                        let ez = playerMesh.position.z + Math.sin(ang) * 25;
+                        const chaser = new THREE.Mesh(npcGeo, enemyEliteMat.clone());
+                        chaser.position.set(ex, 0, ez);
+                        chaser.isVert = false; chaser.direction = 1; chaser.speed = 10 + Math.random() * 3;
+                        chaser.hp = 300; chaser.isElite = true; chaser.isInfected = false;
+                        chaser.infectTimer = 0; chaser.infectTicks = 0;
+                        chaser.isChaser = true; // Bu düşmanlar aktif olarak oyuncuyu kovalar
+                        scene.add(chaser); enemies.push(chaser);
+                    }, i * 300);
+                }
+                playLootSFX();
+            }
+        } else if(GAME.datarunPhase === 'carrying') {
+            // Taşıma halkasını oyuncuya yapıştır
+            drCarryRing.position.set(playerMesh.position.x, -0.85, playerMesh.position.z);
+            drCarryRing.rotation.z += dt * 2.2;
+            drCarryRingMat.opacity = 0.6 + Math.sin(t * 5) * 0.3;
+
+            // Kovalayanlar oyuncuya çok daha agresif yönelsin (enemy loop'ta isChaser kontrol ediliyor)
+
+            // B noktasına yakınlık kontrolü
+            let distB = playerMesh.position.distanceTo(DR_B_POS);
+            if(distB < 6) {
+                _drSuccess();
+            }
+        }
+    }
     function spawnBountyTarget(contractData) {
         let isEliteContract = contractData.clue.includes('PLAZA');
         let spawnZ = isEliteContract ? (-(120 + Math.random() * 80)) : (120 + Math.random() * 80);
@@ -790,6 +1064,9 @@ window.onload = function() {
             if(c.type === 'bounty') {
                 document.getElementById('c-objective').innerText = `HEDEF: ${c.clue}\n⚠ SİVİL KAYIP = KONTRAT İPTAL`;
                 document.getElementById('c-objective').style.color = '#ff8800';
+            } else if(c.type === 'datarun') {
+                document.getElementById('c-objective').innerText = `A → B TAŞIMA | SÜRE: ${c.timeLimit}sn | ÖDÜL: +${c.reward} KRD (+SÜRE BONUSU)\n⚠ Paket alındığında alarm verilir — kaç!`;
+                document.getElementById('c-objective').style.color = '#00ccff';
             } else {
                 document.getElementById('c-objective').innerText = `HEDEF: ${c.target} Düşman Yok Et`;
                 document.getElementById('c-objective').style.color = '#ffeb3b';
@@ -799,10 +1076,12 @@ window.onload = function() {
     }
     if(acceptBtn) {
         acceptBtn.addEventListener('click', () => {
-            if(modal) modal.style.display = 'none'; GAME.isPaused = false; GAME.currentKills = 0; 
+            if(modal) modal.style.display = 'none'; GAME.isPaused = false; GAME.currentKills = 0;
             let c = CONTRACTS[GAME.contractIndex];
             if(c.type === 'bounty') {
                 spawnBountyTarget(c);
+            } else if(c.type === 'datarun') {
+                startDatarun(c);
             }
             updateTracker();
             if(GAME.mode === 'FPS' && !GAME.isMobile) document.body.requestPointerLock();
@@ -813,15 +1092,17 @@ window.onload = function() {
             let c = CONTRACTS[GAME.contractIndex];
             if(c.type === 'bounty') {
                 if(objTracker) objTracker.innerText = `SUİKAST: ${c.clue}`;
+            } else if(c.type === 'datarun') {
+                if(objTracker) objTracker.innerText = 'KAÇIRMA: A NOKTASINA GİT';
             } else {
                 if(objTracker) objTracker.innerText = `GÖREV: ${GAME.currentKills} / ${c.target} İMHA`;
             }
             if(GAME.currentKills >= c.target) {
                 if(objTracker) objTracker.innerText = "GÖREV TAMAMLANDI. ÜCRET AKTARILIYOR...";
-                if(c.type !== 'bounty') {
+                if(c.type !== 'bounty' && c.type !== 'datarun') {
                     GAME.score += 500; if(scoreDisplay) scoreDisplay.innerText = GAME.score.toString().padStart(4, '0');
                 }
-                queueNextContract(); 
+                queueNextContract();
             }
         }
     }
@@ -976,7 +1257,10 @@ window.onload = function() {
     let btnModeEl = document.getElementById('btn-mode'); if(btnModeEl) btnModeEl.addEventListener('click', toggleMode);
     
     function toggleBulletTime() {
-        if(GAME.timeScale !== 1.0 || GAME.isPaused) return;
+        if(GAME.isPaused) return;
+        // Datarun kovalama sırasında her zaman kullanılabilsin
+        if(GAME.timeScale !== 1.0 && !GAME.datarunChasing) return;
+        if(GAME.timeScale !== 1.0) return; // Zaten yavaş zamanda tekrar tetikleme
         GAME.timeScale = 0.2; let hackOverlay = document.getElementById('hack-overlay');
         if(hackOverlay) {
             hackOverlay.style.boxShadow = "inset 0 0 100px rgba(0,255,255,0.3)"; hackOverlay.style.background = "rgba(0, 255, 255, 0.1)"; hackOverlay.style.opacity = 1;
@@ -1179,7 +1463,13 @@ window.onload = function() {
                 }
 
                 _vDir.subVectors(playerMesh.position, e.position); _vDir.y = 0; let dist = playerMesh.position.distanceTo(e.position);
-                if (dist > 25) { 
+
+                // Kovalayanlar (isChaser) mesafe limitini göz ardı eder — her zaman direkt oyuncuya koşar
+                if(e.isChaser) {
+                    if(_vDir.lengthSq() > 0) { _vDir.normalize(); e.position.add(_vDir.multiplyScalar(e.speed * gameDt)); e.lookAt = e.position.clone().add(_vDir); e.rotation.y = Math.atan2(_vDir.x, _vDir.z); }
+                    let fireRate = 0.06;
+                    if(dist < 40 && Math.random() < fireRate * GAME.timeScale) { let aimDir = new THREE.Vector3().subVectors(playerMesh.position, e.position).normalize(); shoot(e.position.clone().add(new THREE.Vector3(0,0.5,0)), aimDir, false); }
+                } else if (dist > 25) { 
                     if (e.isVert) { e.position.z += e.direction * e.speed * gameDt; if (e.position.z > 280 || e.position.z < -280) e.direction *= -1; } else { e.position.x += e.direction * e.speed * gameDt; if (e.position.x > 280 || e.position.x < -280) e.direction *= -1; }
                     e.rotation.y = e.isVert ? (e.direction === 1 ? 0 : Math.PI) : (e.direction === 1 ? Math.PI/2 : -Math.PI/2);
                 } else { 
@@ -1189,6 +1479,9 @@ window.onload = function() {
                 }
                 e.position.y = 0 + Math.sin(now * 0.003 + e.position.x) * 0.2;
             }
+
+            // Datarun sistemi güncelle
+            if(GAME.datarunActive) updateDatarun(gameDt);
         }
         
         if (composer) composer.render(); else renderer.render(scene, camera);
