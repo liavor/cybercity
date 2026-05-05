@@ -200,6 +200,46 @@
         #hack-overlay { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0, 255, 0, 0.05); box-shadow: inset 0 0 80px rgba(0,255,0,0.2); opacity: 0; transition: opacity 0.3s; pointer-events: none; z-index: 4; }
         #dash-overlay { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0, 255, 255, 0.05); box-shadow: inset 0 0 100px rgba(0,255,255,0.15); opacity: 0; transition: opacity 0.1s; pointer-events: none; z-index: 4; }
 
+        /* Şehir Olayı Bildirimi */
+        #city-event-banner {
+            position: absolute; bottom: 160px; left: 50%; transform: translateX(-50%);
+            background: rgba(5,0,15,0.88); backdrop-filter: blur(10px);
+            border: 1px solid rgba(255,60,200,0.4); border-left: 3px solid #ff3cc8;
+            color: #ff88ee; padding: 12px 22px; z-index: 65; display: none;
+            font-family: 'Share Tech Mono', monospace; font-size: 13px; letter-spacing: 1px;
+            box-shadow: 0 0 25px rgba(255,60,200,0.15); text-align: center; pointer-events: auto;
+        }
+        #city-event-banner .ceb-title { color: #ff3cc8; font-size: 10px; letter-spacing: 3px; margin-bottom: 4px; }
+        #city-event-banner .ceb-actions { margin-top: 10px; display: flex; gap: 10px; justify-content: center; }
+        .ceb-btn { padding: 7px 16px; font-size: 12px; font-family: 'Share Tech Mono', monospace; cursor: pointer; border: 1px solid; letter-spacing: 1px; background: transparent; transition: all 0.2s; }
+        .ceb-btn.intervene { color: #ff3cc8; border-color: #ff3cc8; } .ceb-btn.intervene:hover { background: rgba(255,60,200,0.2); }
+        .ceb-btn.ignore    { color: #556677; border-color: #334455; } .ceb-btn.ignore:hover { background: rgba(0,50,80,0.3); }
+
+        /* Araç Modifikasyon Menüsü */
+        #upgrade-menu {
+            position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
+            background: rgba(5,5,0,0.92); backdrop-filter: blur(15px);
+            border: 1px solid rgba(255,200,0,0.3); border-top: 3px solid #fc0;
+            padding: 20px 28px; z-index: 80; display: none; pointer-events: auto;
+            font-family: 'Share Tech Mono', monospace; min-width: 320px;
+            box-shadow: 0 0 40px rgba(255,200,0,0.1);
+        }
+        #upgrade-menu .um-title { color: #fc0; font-size: 11px; letter-spacing: 3px; margin-bottom: 14px; border-bottom: 1px solid rgba(255,200,0,0.2); padding-bottom: 8px; }
+        .upgrade-item { display: flex; justify-content: space-between; align-items: center; padding: 10px 0; border-bottom: 1px solid rgba(255,200,0,0.08); }
+        .upgrade-item .ui-name { color: #ffdd88; font-size: 13px; }
+        .upgrade-item .ui-desc { color: #778899; font-size: 11px; margin-top: 2px; }
+        .upgrade-item .ui-buy { padding: 6px 14px; background: rgba(255,200,0,0.1); border: 1px solid #fc0; color: #fc0; font-family: 'Share Tech Mono', monospace; font-size: 12px; cursor: pointer; transition: all 0.2s; }
+        .upgrade-item .ui-buy:hover { background: rgba(255,200,0,0.3); }
+        .upgrade-item .ui-buy:disabled { opacity: 0.3; cursor: not-allowed; }
+        #upgrade-menu-close { background: none; border: none; color: #556; cursor: pointer; font-size: 11px; margin-top: 10px; font-family: 'Share Tech Mono', monospace; }
+        #upgrade-btn {
+            position: absolute; bottom: 25px; left: 25px; z-index: 20; pointer-events: auto;
+            background: rgba(5,5,0,0.7); backdrop-filter: blur(5px); color: #fc0;
+            border: 1px solid rgba(255,200,0,0.4); border-bottom: 3px solid #fc0;
+            padding: 10px 18px; font-family: 'Share Tech Mono', monospace; font-size: 13px;
+            cursor: pointer; letter-spacing: 1px; display: none;
+        }
+
         /* --- VERİ KAÇIRMA HUD --- */
         #datarun-hud {
             position: absolute; bottom: 100px; left: 50%; transform: translateX(-50%);
@@ -281,6 +321,39 @@
     <div id="bounty-success">✓ KONTRAT TAMAMLANDI<br><span style="font-size:16px;color:#ffdd88" id="bounty-reward-text">+1500 KREDİ</span></div>
     <div id="bounty-fail">✗ KONTRAT İPTAL EDİLDİ<br><span style="font-size:14px;color:#ff8888">Sivil Kayıp — Ödeme Yok</span></div>
     <div id="chase-overlay"></div>
+
+    <!-- ŞEHİR OLAYI BANNER -->
+    <div id="city-event-banner">
+        <div class="ceb-title">▶ ŞEHİR OLAYI TESPİT EDİLDİ</div>
+        <div id="ceb-desc">Siber Banka Soygunu Devam Ediyor</div>
+        <div class="ceb-actions">
+            <button class="ceb-btn intervene" id="ceb-intervene">[ MÜDAHALE ET ]</button>
+            <button class="ceb-btn ignore" id="ceb-ignore">[ GÖZ YUMU ]</button>
+        </div>
+    </div>
+
+    <!-- ARAÇ YÜKSELTMELERİ -->
+    <div id="upgrade-menu">
+        <div class="um-title">▶ ARAÇ MODİFİKASYONLARI</div>
+        <div class="upgrade-item">
+            <div><div class="ui-name">⚡ NİTRO Yakıt</div><div class="ui-desc">Maks hız +40% | Bir kez kullanım</div></div>
+            <button class="ui-buy" id="upg-nitro" data-cost="300">300 KRD</button>
+        </div>
+        <div class="upgrade-item">
+            <div><div class="ui-name">🛡 Zırh Kaplama</div><div class="ui-desc">Araç hasar direnci +50%</div></div>
+            <button class="ui-buy" id="upg-armor" data-cost="500">500 KRD</button>
+        </div>
+        <div class="upgrade-item">
+            <div><div class="ui-name">📡 Hack Anteni</div><div class="ui-desc">Hack menzili 2x uzar</div></div>
+            <button class="ui-buy" id="upg-antenna" data-cost="400">400 KRD</button>
+        </div>
+        <div class="upgrade-item">
+            <div><div class="ui-name">🔫 Taret Sistemi</div><div class="ui-desc">Araçtayken otomatik ateş</div></div>
+            <button class="ui-buy" id="upg-turret" data-cost="700">700 KRD</button>
+        </div>
+        <button id="upgrade-menu-close">[ KAPAT ]</button>
+    </div>
+    <button id="upgrade-btn">🔧 MOD MAĞAZASI</button>
 
     <!-- VERİ KAÇIRMA HUD -->
     <div id="datarun-hud">
@@ -430,11 +503,16 @@ window.onload = function() {
 
     const GAME = {
         mode: 'RTS', score: 0, isMobile: ('ontouchstart' in window) || (navigator.maxTouchPoints > 0),
-        timeScale: 1.0, keys: { w: false, a: false, s: false, d: false, shift: false, g: false },
+        timeScale: 1.0, keys: { w: false, a: false, s: false, d: false, shift: false, g: false, ' ': false },
         moveJoy: { x: 0, y: 0 }, isShooting: false, lastTime: Date.now(),
         playerHealth: 100, shakeTime: 0, lastShot: 0, contractIndex: -1, currentKills: 0, isPaused: false,
         wantedLevel: 0, isDashing: false, dashTimer: 0, dashCooldown: 0,
         isDriving: false, currentVehicle: null, carSpeedRaw: 0,
+        // --- ZIPLAMA FİZİĞİ ---
+        velocityY: 0,
+        isGrounded: true,      // yerde mi?
+        groundY: 0.2,          // şu anki zemin yüksekliği
+        jumpRequested: false,  // space basıldı mı?
         // --- BOUNTY HUNT STATE ---
         bountyActive: false,
         bountyTarget: null,
@@ -455,8 +533,8 @@ window.onload = function() {
     const container = document.getElementById('game-container');
     const scene = new THREE.Scene(); 
     
-    scene.background = new THREE.Color(0x02040a); 
-    scene.fog = new THREE.FogExp2(0x02040a, 0.005); 
+    scene.background = new THREE.Color(0x01020a); 
+    scene.fog = new THREE.FogExp2(new THREE.Color(0x01020a), 0.004); 
 
     // GÖRÜŞ MESAFESİ (FAR) 1000 YAPILDI Kİ AY GÖRÜNÜP TIKLANABİLSİN
     const camera = new THREE.PerspectiveCamera(65, window.innerWidth / window.innerHeight, 0.1, 1000); 
@@ -467,7 +545,7 @@ window.onload = function() {
     renderer.setSize(window.innerWidth, window.innerHeight); 
     renderer.outputEncoding = THREE.sRGBEncoding;
     renderer.toneMapping = THREE.ACESFilmicToneMapping;
-    renderer.toneMappingExposure = 1.2;
+    renderer.toneMappingExposure = 0.85;
     container.appendChild(renderer.domElement);
 
     let composer, bloomPass;
@@ -479,42 +557,174 @@ window.onload = function() {
         composer.addPass(renderScene); composer.addPass(bloomPass);
     } catch(e) { composer = null; }
 
-    const ambientLight = new THREE.AmbientLight(0xffffff, 0.2); scene.add(ambientLight);
-    const dirLight = new THREE.DirectionalLight(0x4466ff, 0.5); dirLight.position.set(20, 100, 20); scene.add(dirLight);
+    const ambientLight    = new THREE.AmbientLight(0xffffff, 0.15); scene.add(ambientLight);
+    const dirLight        = new THREE.DirectionalLight(0x4466ff, 0.4); dirLight.position.set(20, 100, 20); scene.add(dirLight);
 
-    const worldGroup = new THREE.Group(); scene.add(worldGroup); const floorMeshes = []; 
+    // =========================================================
+    // GÜNDÜZ / GECE DÖNGÜSÜ — 150 saniyelik tam tur
+    // =========================================================
+    const DAY_CYCLE_DURATION = 150; // saniye
+    let   dayTime = 0.25;           // 0..1 arası, 0=gece yarısı, 0.25=şafak, 0.5=öğle, 0.75=akşam
 
-    // --- YILDIZLAR VE DOLUNAY (EASTER EGG) ---
+    // Güneş mesh'i
+    const sunGeo = new THREE.SphereGeometry(14, 24, 24);
+    const sunMat = new THREE.MeshBasicMaterial({ color: 0xfff4c2, fog: false });
+    const sunMesh = new THREE.Mesh(sunGeo, sunMat);
+    sunMesh.renderOrder = 0; scene.add(sunMesh);
+
+    // Güneş halesi — glow sprite (katmanlı)
+    function makeSunHaloMat(innerCol, outerCol, radius) {
+        const c = document.createElement('canvas'); c.width = 256; c.height = 256;
+        const ctx = c.getContext('2d');
+        const grad = ctx.createRadialGradient(128,128, 0, 128,128, 128);
+        grad.addColorStop(0,   innerCol);
+        grad.addColorStop(0.3, outerCol);
+        grad.addColorStop(1,   'rgba(0,0,0,0)');
+        ctx.fillStyle = grad; ctx.fillRect(0,0,256,256);
+        return new THREE.SpriteMaterial({ map: new THREE.CanvasTexture(c), transparent: true, blending: THREE.AdditiveBlending, depthWrite: false, fog: false });
+    }
+    const sunGlowInner = new THREE.Sprite(makeSunHaloMat('rgba(255,255,220,0.9)','rgba(255,220,100,0.3)', 80));
+    sunGlowInner.scale.set(80, 80, 1);
+    const sunGlowOuter = new THREE.Sprite(makeSunHaloMat('rgba(255,180,60,0.25)','rgba(255,80,0,0.0)', 160));
+    sunGlowOuter.scale.set(200, 200, 1);
+    scene.add(sunGlowInner); scene.add(sunGlowOuter);
+
+    // Yıldızlar
     const starGeo = new THREE.BufferGeometry();
-    const starCount = 600;
+    const starCount = 700;
     const starPos = new Float32Array(starCount * 3);
     for(let i=0; i<starCount; i++) {
-        starPos[i*3] = (Math.random() - 0.5) * 2000;
-        starPos[i*3+1] = 100 + Math.random() * 800; // Sadece yüksekte
-        starPos[i*3+2] = (Math.random() - 0.5) * 2000;
+        // Güneş/ay'ın yörünge yarıçapından daha uzakta ama kamera görüş alanı içinde
+        const theta = Math.random() * Math.PI * 2;
+        const phi   = Math.random() * Math.PI;
+        const r = 600 + Math.random() * 200;
+        starPos[i*3]   = r * Math.sin(phi) * Math.cos(theta);
+        starPos[i*3+1] = Math.abs(r * Math.cos(phi)) + 50;
+        starPos[i*3+2] = r * Math.sin(phi) * Math.sin(theta);
     }
     starGeo.setAttribute('position', new THREE.BufferAttribute(starPos, 3));
-    const starMat = new THREE.PointsMaterial({color: 0xffffff, size: 1.2, transparent: true, opacity: 0.8, fog: false});
+    const starMat = new THREE.PointsMaterial({ color: 0xffffff, size: 1.4, transparent: true, opacity: 0.0, fog: false, sizeAttenuation: false });
     const stars = new THREE.Points(starGeo, starMat);
     scene.add(stars);
 
-    const moonGeo = new THREE.SphereGeometry(30, 32, 32);
-    const moonMat = new THREE.MeshBasicMaterial({ color: 0xffffee, fog: false }); 
-    const moon = new THREE.Mesh(moonGeo, moonMat);
-    // Ay'ı 1000 Far Clip içine güvenli bir şekilde aldık
-    moon.position.set(100, 250, -400); 
+    // Ay
+    const moonGeo = new THREE.SphereGeometry(28, 28, 28);
+    const moonMat = new THREE.MeshBasicMaterial({ color: 0xdde8ff, fog: false });
+    const moon    = new THREE.Mesh(moonGeo, moonMat);
     scene.add(moon);
-    
-    let moonState = 0;
-    moon.targetScale = 1.0;
-    
+
+    let moonState = 0; moon.targetScale = 1.0;
     function handleMoonHit() {
-        moonState++;
-        if(moonState > 3) moonState = 0; 
-        moon.targetScale = 1.0 + (moonState * 0.5); 
-        moon.material.color.setHex(0xffffff); // Geri bildirim parlaması
-        setTimeout(() => { if(moon) moon.material.color.setHex(0xffffee); }, 150);
+        moonState++; if(moonState > 3) moonState = 0;
+        moon.targetScale = 1.0 + moonState * 0.5;
+        moon.material.color.setHex(0xffffff);
+        setTimeout(() => { if(moon) moon.material.color.setHex(0xdde8ff); }, 150);
     }
+
+    // Gökyüzü renk anahtarları — [dayTime, skyHex, fogHex, ambientHex, ambientIntensity, dirHex, dirIntensity]
+    // Kural: ambientIntensity MAX 0.28 — wireframe/neon estetiği asla yanmasın
+    // dirLight zemini boyar ama intensity düşük tutulur
+    const SKY_KEYS = [
+        // gece yarısı — deep cyberpunk dark
+        [0.00, 0x00010a, 0x00010a, 0x0a1428, 0.10, 0x1133aa, 0.12],
+        // şafak kızıllığı
+        [0.22, 0x0d0501, 0x0d0501, 0x2a1008, 0.14, 0xcc3300, 0.30],
+        // gün doğumu — Vice City pembesi
+        [0.27, 0x7a2010, 0x5a1808, 0x3a1808, 0.20, 0xff6020, 0.45],
+        // sabah — Vice City sıcak mavi-pembe
+        [0.35, 0x1a2a4a, 0x102035, 0x151e30, 0.22, 0xffcc88, 0.40],
+        // öğle — Vice City parlak gökyüzü ama ambient LOW
+        [0.50, 0x1c3055, 0x122040, 0x182030, 0.25, 0xffeebb, 0.38],
+        // ikindi — hafif sarı ton
+        [0.65, 0x1a2840, 0x101c30, 0x181c28, 0.22, 0xffdd99, 0.38],
+        // gün batımı — turuncu-kızıl gökyüzü
+        [0.73, 0x5a1a05, 0x3a1003, 0x2a1005, 0.18, 0xff5500, 0.50],
+        // alacakaranlık — koyu mor
+        [0.80, 0x08030f, 0x05020a, 0x10082a, 0.12, 0x4411aa, 0.20],
+        // gece — tam cyberpunk
+        [0.90, 0x00010a, 0x00010a, 0x0a1428, 0.10, 0x1133aa, 0.12],
+        [1.00, 0x00010a, 0x00010a, 0x0a1428, 0.10, 0x1133aa, 0.12],
+    ];
+
+    function _lerpSkyKey(t) {
+        // t: 0..1, SKY_KEYS içinde komşu iki anahtar arasını lerp et
+        let prev = SKY_KEYS[0], next = SKY_KEYS[SKY_KEYS.length-1];
+        for(let i=0; i<SKY_KEYS.length-1; i++) {
+            if(t >= SKY_KEYS[i][0] && t < SKY_KEYS[i+1][0]) { prev = SKY_KEYS[i]; next = SKY_KEYS[i+1]; break; }
+        }
+        const alpha = (t - prev[0]) / Math.max(0.0001, next[0] - prev[0]);
+        function lerpCol(a, b, f) {
+            const ca = new THREE.Color(a), cb = new THREE.Color(b);
+            return ca.lerp(cb, f);
+        }
+        return {
+            sky:     lerpCol(prev[1], next[1], alpha),
+            fog:     lerpCol(prev[2], next[2], alpha),
+            ambient: lerpCol(prev[3], next[3], alpha),
+            ambInt:  prev[4] + (next[4]-prev[4])*alpha,
+            dir:     lerpCol(prev[5], next[5], alpha),
+            dirInt:  prev[6] + (next[6]-prev[6])*alpha,
+        };
+    }
+
+    const _sunOrbitRadius = 500;
+    function updateDayNight(dt) {
+        dayTime = (dayTime + dt / DAY_CYCLE_DURATION) % 1.0;
+        const sk = _lerpSkyKey(dayTime);
+
+        // Arka plan ve sis
+        scene.background.copy(sk.sky);
+        scene.fog.color.copy(sk.fog);
+
+        // Işıklar
+        ambientLight.color.copy(sk.ambient);
+        ambientLight.intensity = sk.ambInt;
+        dirLight.color.copy(sk.dir);
+        dirLight.intensity = sk.dirInt;
+        // BloomPass gündüz biraz kıs, gece aç (neon daha parlak görünsün)
+        if(bloomPass) bloomPass.strength = 1.6 + (1.0 - Math.min(1, sk.ambInt * 4)) * 0.5;
+
+        // Güneş yörüngesi — ufuk çizgisi üzerinde yarım çember
+        const sunAngle = (dayTime * Math.PI * 2) - Math.PI * 0.5; // 0.25'te ufuktan çıkıyor
+        sunMesh.position.set(
+            Math.cos(sunAngle) * _sunOrbitRadius * 0.6,
+            Math.sin(sunAngle) * _sunOrbitRadius,
+            -_sunOrbitRadius * 0.8
+        );
+        sunGlowInner.position.copy(sunMesh.position);
+        sunGlowOuter.position.copy(sunMesh.position);
+
+        // Güneş görünürlüğü: gece altında kaybolsun
+        const sunVis = Math.max(0, Math.sin(dayTime * Math.PI * 2 - Math.PI * 0.5));
+        sunMesh.visible = sunVis > 0.01;
+        sunGlowInner.visible = sunVis > 0.01;
+        sunGlowOuter.visible = sunVis > 0.01;
+        sunMat.opacity = Math.min(1, sunVis * 3);
+
+        // Güneş rengi — gün doğumu/batımında kızıl, öğlede beyaz-sarı
+        const sunT = Math.max(0, Math.sin(dayTime * Math.PI * 2));
+        const sunCol = new THREE.Color().lerpColors(new THREE.Color(0xff4400), new THREE.Color(0xfff8e0), Math.min(1, sunT * 2));
+        sunMat.color.copy(sunCol);
+
+        // Hale büyüklüğü — gün doğumu/batımında dev
+        const haloScale = 80 + (1 - Math.min(1, sunT * 2)) * 120;
+        sunGlowInner.scale.set(haloScale, haloScale, 1);
+        sunGlowOuter.scale.set(haloScale * 2.5, haloScale * 2.5, 1);
+
+        // Ay: güneşin tam karşısında
+        moon.position.set(-sunMesh.position.x * 0.7, Math.max(60, -sunMesh.position.y * 0.6 + 80), sunMesh.position.z * 0.5);
+        const moonVis = Math.max(0, -Math.sin(dayTime * Math.PI * 2 - Math.PI * 0.5));
+        moonMat.opacity = moonVis;
+        moon.visible = moonVis > 0.01;
+
+        // Yıldız: gece görünür, gündüz kaybolur
+        starMat.opacity = Math.max(0, Math.min(0.9, (1 - sk.ambInt * 1.4)));
+
+        // dirLight güneşi takip eder
+        dirLight.position.copy(sunMesh.position).normalize().multiplyScalar(100);
+    }
+
+    const worldGroup = new THREE.Group(); scene.add(worldGroup); const floorMeshes = [];
 
     // --- PROSEDÜREL DOKULAR ---
     function createRoadTexture() {
@@ -633,6 +843,84 @@ window.onload = function() {
     const muzzleMesh = new THREE.Mesh(new THREE.PlaneGeometry(0.5, 0.5), new THREE.MeshBasicMaterial({ color: new THREE.Color(4,4,0), transparent: true, opacity: 0 })); muzzleMesh.position.set(0.4, -0.25, -1.2); gunGroup.add(muzzleMesh);
     camera.add(gunGroup); scene.add(camera);
 
+    // =========================================================
+    // GOD RAYS — Neon ışık huzmesi sprite'ları
+    // =========================================================
+    const godRaySprites = [];
+    const godRayColors = [
+        new THREE.Color(0, 3, 3),   // cyan
+        new THREE.Color(3, 0, 3),   // magenta
+        new THREE.Color(0, 1.5, 3), // blue
+        new THREE.Color(2, 0, 2),   // purple
+        new THREE.Color(3, 0.5, 0), // orange (endüstri)
+    ];
+    function createGodRayTexture(col) {
+        const c = document.createElement('canvas'); c.width = 64; c.height = 256;
+        const ctx = c.getContext('2d');
+        const grad = ctx.createLinearGradient(0, 0, 0, 256);
+        grad.addColorStop(0,   `rgba(${Math.floor(col.r*60)},${Math.floor(col.g*60)},${Math.floor(col.b*60)},0)`);
+        grad.addColorStop(0.1, `rgba(${Math.floor(col.r*80)},${Math.floor(col.g*80)},${Math.floor(col.b*80)},0.55)`);
+        grad.addColorStop(0.5, `rgba(${Math.floor(col.r*50)},${Math.floor(col.g*50)},${Math.floor(col.b*50)},0.25)`);
+        grad.addColorStop(1,   `rgba(0,0,0,0)`);
+        ctx.fillStyle = grad; ctx.fillRect(0, 0, 64, 256);
+        return new THREE.CanvasTexture(c);
+    }
+    // Binalara ve neon tabelaların bulunduğu noktalara god ray yerleştir
+    const godRayPositions = [
+        {x: -120, z: -180, col: 0}, {x: 60, z: -200, col: 1}, {x: -60, z: -140, col: 2},
+        {x: 120, z: 80, col: 4},   {x: -100, z: 120, col: 4}, {x: 30, z: 160, col: 4},
+        {x: 0, z: -240, col: 3},   {x: 180, z: -160, col: 0},{x: -180, z: -80, col: 1},
+        {x: 90, z: -90, col: 2},   {x: -50, z: 60, col: 0},  {x: 150, z: -30, col: 3},
+    ];
+    godRayPositions.forEach(p => {
+        const col = godRayColors[p.col];
+        const mat = new THREE.MeshBasicMaterial({
+            map: createGodRayTexture(col), transparent: true, blending: THREE.AdditiveBlending,
+            side: THREE.DoubleSide, depthWrite: false, opacity: 0.7
+        });
+        const geo = new THREE.PlaneGeometry(6 + Math.random()*4, 40 + Math.random()*30);
+        const ray = new THREE.Mesh(geo, mat);
+        ray.position.set(p.x + (Math.random()-0.5)*10, 18, p.z + (Math.random()-0.5)*10);
+        ray.rotation.y = Math.random() * Math.PI;
+        ray._baseOpacity = 0.4 + Math.random()*0.4;
+        ray._phase = Math.random() * Math.PI * 2;
+        scene.add(ray); godRaySprites.push(ray);
+        // İkinci katman — hafifçe döndürülmüş
+        const ray2 = ray.clone(); ray2.rotation.y += Math.PI/4; ray2._phase = ray._phase + 1.2;
+        scene.add(ray2); godRaySprites.push(ray2);
+    });
+
+    // =========================================================
+    // SSR — Zemin yansıma efekti (canvas texture tabanlı)
+    // =========================================================
+    // roadMat zaten metalness:0.85 — ek olarak envMap benzeri renk yansıması
+    // için ayrı bir "puddle" (su birikintisi) mesh sistemi
+    const puddleGeo  = new THREE.PlaneGeometry(1, 1);
+    const puddleMeshes = [];
+    const puddlePositions = [
+        {x:-80,z:-150,w:18,d:8},{x:40,z:-180,w:12,d:6},{x:-30,z:-120,w:20,d:10},
+        {x:60,z:100,w:14,d:7},{x:-110,z:80,w:16,d:9},{x:20,z:140,w:10,d:5},
+        {x:130,z:-50,w:18,d:8},{x:-60,z:30,w:12,d:6},{x:90,z:-80,w:22,d:10},
+        {x:-150,z:-200,w:14,d:7},{x:0,z:200,w:16,d:8},
+    ];
+    puddlePositions.forEach(p => {
+        // Her su birikintisi için rengi yakındaki bölgeye göre belirle
+        let puddleColor = p.z < -100 ? new THREE.Color(0.02, 0.04, 0.15) : 
+                          p.z > 100  ? new THREE.Color(0.1, 0.03, 0.01)  :
+                                       new THREE.Color(0.02, 0.08, 0.1);
+        const mat = new THREE.MeshStandardMaterial({
+            color: puddleColor, roughness: 0.0, metalness: 1.0,
+            transparent: true, opacity: 0.55, envMapIntensity: 2.0
+        });
+        const m = new THREE.Mesh(puddleGeo, mat);
+        m.rotation.x = -Math.PI/2;
+        m.scale.set(p.w, p.d, 1);
+        m.position.set(p.x, -0.98, p.z);
+        m._phase = Math.random()*Math.PI*2;
+        m._col = puddleColor.clone();
+        scene.add(m); puddleMeshes.push(m);
+    });
+    
     let playerTargetPos = new THREE.Vector3(0, 0.2, 0); const playerSpeed = 16; const playerRadius = 0.6;
 
     const visualBeams = [];
@@ -700,8 +988,82 @@ window.onload = function() {
     bountyRingMesh.visible = false;
     scene.add(bountyRingMesh);
 
-    // =====================================================================
-    // --- VERİ KAÇIRMA (DATARUN) SİSTEMİ ---
+    // =========================================================
+    // ARAÇ YÜKSELTMELERİ (UPGRADE SİSTEMİ)
+    // =========================================================
+    const UPGRADES = { nitro: false, armor: false, antenna: false, turret: false };
+    function _refreshUpgradeButtons() {
+        [['upg-nitro',300,'nitro'],['upg-armor',500,'armor'],['upg-antenna',400,'antenna'],['upg-turret',700,'turret']].forEach(([id,cost,key]) => {
+            let btn = document.getElementById(id); if(!btn) return;
+            if(UPGRADES[key]) { btn.disabled = true; btn.innerText = '✓ KURULU'; return; }
+            btn.disabled = GAME.score < cost; btn.innerText = `${cost} KRD`;
+        });
+    }
+    document.getElementById('upg-nitro')?.addEventListener('click', () => { if(GAME.score >= 300 && !UPGRADES.nitro) { GAME.score -= 300; UPGRADES.nitro = true; if(GAME.isDriving){ GAME.carSpeedRaw = 120; setTimeout(()=>{ GAME.carSpeedRaw = Math.min(GAME.carSpeedRaw, 80); },3000); } showLootMessage("⚡ NİTRO AKTİF!", "#ffff00"); _refreshUpgradeButtons(); if(scoreDisplay) scoreDisplay.innerText = GAME.score.toString().padStart(4,'0'); }});
+    document.getElementById('upg-armor')?.addEventListener('click',   () => { if(GAME.score >= 500 && !UPGRADES.armor)   { GAME.score -= 500; UPGRADES.armor   = true; showLootMessage("🛡 ZIRH AKTIF", "#88aaff"); _refreshUpgradeButtons(); if(scoreDisplay) scoreDisplay.innerText = GAME.score.toString().padStart(4,'0'); }});
+    document.getElementById('upg-antenna')?.addEventListener('click', () => { if(GAME.score >= 400 && !UPGRADES.antenna) { GAME.score -= 400; UPGRADES.antenna = true; showLootMessage("📡 HACK MENZİLİ 2X", "#00ccff"); _refreshUpgradeButtons(); if(scoreDisplay) scoreDisplay.innerText = GAME.score.toString().padStart(4,'0'); }});
+    document.getElementById('upg-turret')?.addEventListener('click',  () => { if(GAME.score >= 700 && !UPGRADES.turret)  { GAME.score -= 700; UPGRADES.turret  = true; showLootMessage("🔫 TARET SİSTEMİ AKTİF", "#ff8800"); _refreshUpgradeButtons(); if(scoreDisplay) scoreDisplay.innerText = GAME.score.toString().padStart(4,'0'); }});
+    document.getElementById('upgrade-menu-close')?.addEventListener('click', () => { document.getElementById('upgrade-menu').style.display='none'; GAME.isPaused=false; });
+    document.getElementById('upgrade-btn')?.addEventListener('click', () => { GAME.isPaused=true; _refreshUpgradeButtons(); document.getElementById('upgrade-menu').style.display='block'; });
+
+    // =========================================================
+    // HACKING 2.0 — Çevre etkileşimi
+    // =========================================================
+    const trafficLightPositions = [{x:-60,z:-60},{x:60,z:-60},{x:-60,z:60},{x:60,z:60},{x:0,z:-120},{x:0,z:120}];
+    const trafficLights = trafficLightPositions.map(p => {
+        const g = new THREE.Group();
+        const pole = new THREE.Mesh(new THREE.CylinderGeometry(0.15,0.15,5), new THREE.MeshBasicMaterial({color:0x222222}));
+        pole.position.y=2.5; g.add(pole);
+        const head = new THREE.Mesh(new THREE.BoxGeometry(0.8,1.6,0.4), new THREE.MeshBasicMaterial({color:0x111111}));
+        head.position.y=5.3; g.add(head);
+        const light = new THREE.Mesh(new THREE.SphereGeometry(0.25,8,8), new THREE.MeshBasicMaterial({color: new THREE.Color(0,3,0)}));
+        light.position.y=5.3; g.add(light); g.position.set(p.x,-1,p.z); g._hacked=false; g._light=light;
+        scene.add(g); return g;
+    });
+    const billboards = [];
+    [{x:-90,z:-170,h:35},{x:70,z:-190,h:40},{x:-40,z:130,h:30},{x:130,z:90,h:38}].forEach(p => {
+        const bb = new THREE.Mesh(new THREE.PlaneGeometry(12,6), new THREE.MeshBasicMaterial({color: new THREE.Color(1,0,2), side:THREE.DoubleSide, transparent:true, opacity:0.9}));
+        bb.position.set(p.x,p.h,p.z); bb._active=true; scene.add(bb); billboards.push(bb);
+    });
+
+    // =========================================================
+    const CITY_EVENTS = [
+        {id:'bank',title:'SİBER BANKA SOYGUNU',desc:'Çete banka sistemini hackliyor. Müdahale et veya payını al.',interveneReward:800,ignoreReward:200},
+        {id:'gang',title:'ÇETE SAVAŞI',desc:'İki rakip fraksiyon kavgasına tutuştu. Taraf seç.',interveneReward:600,ignoreReward:0},
+        {id:'kidnap',title:'SİBER KAÇIRMA',desc:'Bir kurye saldırıya uğradı. Kurtarırsan büyük ödül.',interveneReward:1000,ignoreReward:0},
+        {id:'convoy',title:'YÜKSEK DEĞER KONVOY',desc:'KuroNet konvoyu geçiyor. Durdurabilirsen kargo senin.',interveneReward:1200,ignoreReward:300},
+    ];
+    let cityEventActive=false;
+    let _cityEventClock=0; const _CITY_EVENT_INTERVAL=60;
+
+    function triggerCityEvent() {
+        if(cityEventActive||GAME.isPaused) return;
+        cityEventActive=true;
+        let ev=CITY_EVENTS[Math.floor(Math.random()*CITY_EVENTS.length)];
+        document.getElementById('ceb-desc').innerText=ev.desc;
+        document.querySelector('#city-event-banner .ceb-title').innerText=`▶ ${ev.title}`;
+        let banner=document.getElementById('city-event-banner'); if(banner) banner.style.display='block';
+        let evX=playerMesh.position.x+(Math.random()-0.5)*120;
+        let evZ=playerMesh.position.z+(Math.random()-0.5)*120;
+        let eventEnemies=[];
+        for(let i=0;i<5;i++){
+            const em=new THREE.Mesh(npcGeo,enemyEliteMat.clone());
+            em.position.set(evX+(i%3)*5-5,0,evZ+Math.floor(i/3)*5);
+            em.hp=150;em.isElite=true;em.isInfected=false;em.infectTimer=0;em.infectTicks=0;em.isVert=true;em.direction=1;em.speed=6;
+            scene.add(em);enemies.push(em);eventEnemies.push(em);
+        }
+        document.getElementById('ceb-intervene').onclick=()=>{
+            banner.style.display='none';cityEventActive=false;
+            GAME.score+=ev.interveneReward;if(scoreDisplay) scoreDisplay.innerText=GAME.score.toString().padStart(4,'0');
+            showLootMessage(`✓ MÜDAHALE: +${ev.interveneReward} KRD`,"#00ffcc");
+            eventEnemies.forEach(e=>{e.isChaser=true;e.speed=12;});
+        };
+        document.getElementById('ceb-ignore').onclick=()=>{
+            banner.style.display='none';cityEventActive=false;
+            if(ev.ignoreReward>0){GAME.score+=ev.ignoreReward;if(scoreDisplay) scoreDisplay.innerText=GAME.score.toString().padStart(4,'0');showLootMessage(`~ GÖZ YUMU: +${ev.ignoreReward} KRD`,"#778899");}
+        };
+        setTimeout(()=>{if(cityEventActive){banner.style.display='none';cityEventActive=false;}},30000);
+    }
     // A noktası = pickup (endüstri), B noktası = teslim (plaza)
     // =====================================================================
     const DR_A_POS = new THREE.Vector3(40, 0, 140);   // Endüstri kuzeyi
@@ -1026,7 +1388,7 @@ window.onload = function() {
         entity.isVert = isVert; entity.direction = Math.random() > 0.5 ? 1 : -1; entity.speed = isElite ? (8 + Math.random() * 4) : (4 + Math.random() * 4);
         let randomPosAlongRoad = (Math.random() - 0.5) * 500;
         if (isVert) { entity.position.set(roadCoord + offset, 0, randomPosAlongRoad); } else { entity.position.set(randomPosAlongRoad, 0, roadCoord + offset); }
-        entity.hp = isElite ? 250 : 100; entity.isElite = isElite; entity.isInfected = false; entity.infectTimer = 0; entity.infectTicks = 0;
+        entity.hp = isElite ? 250 : 100; entity._maxHp = entity.hp; entity.isElite = isElite; entity.isInfected = false; entity.infectTimer = 0; entity.infectTicks = 0;
         scene.add(entity); isArray.push(entity);
     }
     for(let i=0; i<40; i++) spawnEntity(enemies, 'enemy', 40); 
@@ -1146,7 +1508,16 @@ window.onload = function() {
 
     document.addEventListener('keydown', (e) => {
         const key = e.key.toLowerCase(); if(GAME.keys.hasOwnProperty(key)) GAME.keys[key] = true;
-        if(e.key === 'Shift') doDash(); if(key === 'f') toggleMode(); if(key === 'q') toggleBulletTime(); if(key === 'e') triggerContagion(); if(key === 'g') doInteract(); 
+        if(e.key === 'Shift') doDash(); 
+        if(key === 'f') toggleMode(); 
+        if(key === 'q') toggleBulletTime(); 
+        if(key === 'e') triggerContagion();
+        if(key === 'r') triggerContagion(); // alias
+        if(key === 'g') doInteract();
+        if(e.code === 'Space' && GAME.mode === 'FPS' && !GAME.isDriving) {
+            e.preventDefault();
+            if(GAME.isGrounded) GAME.jumpRequested = true;
+        }
     });
     document.addEventListener('keyup', (e) => { const key = e.key.toLowerCase(); if(GAME.keys.hasOwnProperty(key)) GAME.keys[key] = false; });
 
@@ -1304,12 +1675,39 @@ window.onload = function() {
         requestAnimationFrame(animate);
         const now = Date.now(); let dt = (now - GAME.lastTime) / 1000; if(dt > 0.1) dt = 0.1; GAME.lastTime = now;
         
-        // YENİ: Ay (Moon) Pürüzsüz Büyüme Animasyonu (Lerp)
         if (typeof moon !== 'undefined') {
             moon.scale.lerp(new THREE.Vector3(moon.targetScale, moon.targetScale, moon.targetScale), 0.05);
         }
+        // Gün/Gece döngüsü her frame güncellenir (pause'da bile yavaşça devam eder)
+        updateDayNight(dt * (GAME.isPaused ? 0 : 1));
+
+        // --- GOD RAYS ANİMASYON ---
+        const t = now * 0.001;
+        for(let ray of godRaySprites) {
+            ray.material.opacity = ray._baseOpacity * (0.6 + Math.sin(t * 1.1 + ray._phase) * 0.4);
+            ray.rotation.y += 0.0005;
+        }
+
+        // --- SSR PUDDLE SHIMMER ---
+        for(let pm of puddleMeshes) {
+            pm.material.opacity = 0.35 + Math.sin(t*0.8 + pm._phase)*0.2;
+            // Yakın neon ışıklarına göre renk kayması
+            let col = pm._col.clone();
+            col.r += Math.sin(t*0.5 + pm._phase)*0.04;
+            col.b += Math.cos(t*0.7 + pm._phase)*0.06;
+            pm.material.color.copy(col);
+        }
 
         if(!GAME.isPaused) {
+            // --- ŞEHİR OLAYLARI TIMER ---
+            _cityEventClock += dt;
+            if(_cityEventClock >= _CITY_EVENT_INTERVAL && !cityEventActive) {
+                _cityEventClock = 0; triggerCityEvent();
+            }
+
+            // --- UPGRADE BUTON GÖRÜNÜRLÜKİ (araçtayken göster) ---
+            let upgBtn = document.getElementById('upgrade-btn');
+            if(upgBtn) upgBtn.style.display = GAME.isDriving ? 'block' : 'none';
             if(!GAME.isDriving) {
                 let canEnter = false; for(let car of vehicles) { if(playerMesh.position.distanceTo(car.position) < 8) { canEnter = true; break; } }
                 let btnInt = document.getElementById('btn-interact'); if(btnInt) { if(canEnter) btnInt.style.display = 'block'; else btnInt.style.display = 'none'; }
@@ -1353,6 +1751,13 @@ window.onload = function() {
                     }
                 }
                 if(GAME.mode === 'FPS' && GAME.isShooting && (now - GAME.lastShot > 150)) { let shootDir = new THREE.Vector3(0, 0, -1).applyQuaternion(camera.quaternion); shoot(cv.position.clone().add(new THREE.Vector3(0,1.5,0)), shootDir, true); GAME.lastShot = now; }
+
+                // TARET: Araçtayken en yakın düşmana otomatik ateş
+                if(UPGRADES.turret && Math.random() < 0.06 * GAME.timeScale) {
+                    let closest=null,minDist=Infinity;
+                    for(let i=0;i<enemies.length;i++){let d=cv.position.distanceTo(enemies[i].position);if(d<35&&d<minDist){minDist=d;closest=enemies[i];}}
+                    if(closest){let aimDir=new THREE.Vector3().subVectors(closest.position.clone().add(new THREE.Vector3(0,1,0)),cv.position.clone().add(new THREE.Vector3(0,1.5,0))).normalize();shoot(cv.position.clone().add(new THREE.Vector3(0,1.5,0)),aimDir,true);}
+                }
             } else {
                 let currentSpeed = playerSpeed; if(GAME.dashCooldown > 0) GAME.dashCooldown -= dt; if(GAME.isDashing) { GAME.dashTimer -= dt; if(GAME.dashTimer <= 0) GAME.isDashing = false; else currentSpeed = playerSpeed * 4.0; }
                 const speed = currentSpeed * dt; const oldPos = playerMesh.position.clone();
@@ -1374,10 +1779,71 @@ window.onload = function() {
                     }
                     let camTarget = new THREE.Vector3(playerMesh.position.x, playerMesh.position.y + 35, playerMesh.position.z + 25); camera.position.lerp(camTarget, 0.05); camera.lookAt(playerMesh.position);
                 } else if (GAME.mode === 'FPS') {
-                    _vDir.set(0,0,0); if(!GAME.isMobile) { if(GAME.keys.w) _vDir.z -= 1; if(GAME.keys.s) _vDir.z += 1; if(GAME.keys.a) _vDir.x -= 1; if(GAME.keys.d) _vDir.x += 1; } else { _vDir.x = GAME.moveJoy.x; _vDir.z = GAME.moveJoy.y; }
-                    if(_vDir.lengthSq() > 0) { _vDir.normalize(); _vDir.applyAxisAngle(new THREE.Vector3(0,1,0), playerMesh.rotation.y); playerMesh.position.add(_vDir.multiplyScalar(speed * 1.5)); }
+                    // --- Yatay hareket ---
+                    _vDir.set(0,0,0); 
+                    if(!GAME.isMobile) { if(GAME.keys.w) _vDir.z -= 1; if(GAME.keys.s) _vDir.z += 1; if(GAME.keys.a) _vDir.x -= 1; if(GAME.keys.d) _vDir.x += 1; } 
+                    else { _vDir.x = GAME.moveJoy.x; _vDir.z = GAME.moveJoy.y; }
+                    if(_vDir.lengthSq() > 0) { _vDir.normalize(); _vDir.applyAxisAngle(new THREE.Vector3(0,1,0), playerMesh.rotation.y); playerMesh.position.x += _vDir.x * speed * 1.5; playerMesh.position.z += _vDir.z * speed * 1.5; }
                     if(checkCollision(playerMesh.position, playerRadius)) { playerMesh.position.copy(oldPos); }
-                    camera.position.copy(playerMesh.position); camera.position.y += 0.6; 
+
+                    // --- Yerçekimi + Zıplama Fiziği ---
+                    const GRAVITY     = -28;   // m/s² (hızlı ama keyifli)
+                    const JUMP_POWER  = 10;    // zıplama başlangıç hızı
+                    const PLAYER_H    = 1.2;   // oyuncu yarı yüksekliği
+
+                    // Zıplama talebi
+                    if(GAME.jumpRequested && GAME.isGrounded) {
+                        GAME.velocityY   = JUMP_POWER;
+                        GAME.isGrounded  = false;
+                        GAME.jumpRequested = false;
+                    }
+                    GAME.jumpRequested = false;
+
+                    // Yerçekimi uygula
+                    if(!GAME.isGrounded) {
+                        GAME.velocityY += GRAVITY * gameDt;
+                    }
+                    playerMesh.position.y += GAME.velocityY * gameDt;
+
+                    // --- Zemin / Araç Üstü Tespiti ---
+                    // 1) Araç tavanı üstünde mi?
+                    let onVehicle   = false;
+                    let vehicleRoofY = 0;
+                    for(let car of vehicles) {
+                        if(car === GAME.currentVehicle) continue;
+                        let carBB = new THREE.Box3().setFromObject(car);
+                        let px = playerMesh.position.x, pz = playerMesh.position.z;
+                        // Yatayda araç üzerinde mi?
+                        if(px > carBB.min.x - 0.3 && px < carBB.max.x + 0.3 &&
+                           pz > carBB.min.z - 0.3 && pz < carBB.max.z + 0.3) {
+                            let roofY = carBB.max.y + PLAYER_H;
+                            // Üstten geliyorsa (düşme) tavan üstünde dur
+                            if(playerMesh.position.y <= roofY + 0.15 && playerMesh.position.y >= carBB.min.y) {
+                                vehicleRoofY = roofY;
+                                onVehicle    = true;
+                                break;
+                            }
+                        }
+                    }
+
+                    // 2) Zemin Y'yi belirle
+                    if(onVehicle) {
+                        GAME.groundY = vehicleRoofY;
+                    } else {
+                        GAME.groundY = 0.2; // normal zemin
+                    }
+
+                    // 3) Zemin çarpışma çözümü
+                    if(playerMesh.position.y <= GAME.groundY) {
+                        playerMesh.position.y = GAME.groundY;
+                        GAME.velocityY  = 0;
+                        GAME.isGrounded = true;
+                    } else {
+                        GAME.isGrounded = false;
+                    }
+
+                    // Kamera
+                    camera.position.copy(playerMesh.position); camera.position.y += 0.6;
                     if(GAME.shakeTime > 0) { camera.position.x += (Math.random() - 0.5) * 0.3; camera.position.y += (Math.random() - 0.5) * 0.3; GAME.shakeTime -= dt; }
                 }
             }
@@ -1464,7 +1930,50 @@ window.onload = function() {
 
                 _vDir.subVectors(playerMesh.position, e.position); _vDir.y = 0; let dist = playerMesh.position.distanceTo(e.position);
 
-                // Kovalayanlar (isChaser) mesafe limitini göz ardı eder — her zaman direkt oyuncuya koşar
+                // --- TAKTİKSEL AI STATE MACHINE ---
+                // Hacklenen düşman: oyuncu için savaşır
+                if(e._hacked) {
+                    e._hackTimer -= dt;
+                    if(e._hackTimer <= 0) { e._hacked=false; e.material = e.isElite ? enemyEliteMat : enemyMat; }
+                    else {
+                        // En yakın düşmanı seç ve ona ateş et
+                        let friendTarget=null, fd=Infinity;
+                        enemies.forEach(f=>{ if(f!==e&&!f._hacked){ let d=e.position.distanceTo(f.position); if(d<30&&d<fd){fd=d;friendTarget=f;}}});
+                        if(friendTarget){ let aimDir=new THREE.Vector3().subVectors(friendTarget.position,e.position).normalize(); shoot(e.position.clone().add(new THREE.Vector3(0,0.5,0)),aimDir,true); }
+                        continue; // Normal AI skip
+                    }
+                }
+                // Dikkat dağıtılmış düşman: reklam panosuna koşar
+                if(e._distracted) {
+                    e._distractTimer -= dt;
+                    if(e._distractTimer<=0) { e._distracted=false; } 
+                    else { e.position.y=0; continue; } // Yerinde dur
+                }
+                // Alarm hedefine yönlen
+                if(e._alarmTarget) {
+                    e._alarmTimer -= dt;
+                    if(e._alarmTimer<=0) { e._alarmTarget=null; }
+                    else {
+                        let ad=new THREE.Vector3().subVectors(e._alarmTarget,e.position); ad.y=0;
+                        if(ad.lengthSq()>1){ ad.normalize(); e.position.add(ad.multiplyScalar(e.speed*gameDt)); }
+                        else { e._alarmTarget=null; }
+                        continue;
+                    }
+                }
+                // Siper alma: HP %40'ın altına düşünce cover ara
+                if(e.hp < e._maxHp*0.4 && !e._coverPos && !e.isChaser) {
+                    e._coverPos = null; // Lazy: sadece yavaşla ve geri çekil
+                    let retreatDir = new THREE.Vector3().subVectors(e.position, playerMesh.position).normalize();
+                    e._coverPos = e.position.clone().add(retreatDir.multiplyScalar(15));
+                }
+                if(e._coverPos) {
+                    let cd = new THREE.Vector3().subVectors(e._coverPos, e.position); cd.y=0;
+                    if(cd.length()>2){ cd.normalize(); e.position.add(cd.multiplyScalar(e.speed*0.7*gameDt)); }
+                    else { e._coverPos=null; } // Sipere ulaştı
+                    // Siperdeyken arada ateş et
+                    if(dist<35&&Math.random()<0.02) { let aimDir=new THREE.Vector3().subVectors(playerMesh.position,e.position).normalize(); shoot(e.position.clone().add(new THREE.Vector3(0,0.5,0)),aimDir,false); }
+                    e.position.y=0+Math.sin(now*0.003+e.position.x)*0.2; continue;
+                }
                 if(e.isChaser) {
                     if(_vDir.lengthSq() > 0) { _vDir.normalize(); e.position.add(_vDir.multiplyScalar(e.speed * gameDt)); e.lookAt = e.position.clone().add(_vDir); e.rotation.y = Math.atan2(_vDir.x, _vDir.z); }
                     let fireRate = 0.06;
