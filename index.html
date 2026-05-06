@@ -804,32 +804,154 @@ window.onload = function() {
         }
     }
 
-    const vehicles = []; const carGeo = new THREE.BoxGeometry(2.5, 1.0, 5);
-    const carMat1 = new THREE.MeshStandardMaterial({color: 0x111122, metalness: 0.9, roughness: 0.2}); 
-    const carMat2 = new THREE.MeshStandardMaterial({color: 0x331111, metalness: 0.9, roughness: 0.2});
+    const vehicles = [];
     const glowCyan = new THREE.Color(0, 3, 3); const glowRed = new THREE.Color(3, 0, 0); const noGlow = new THREE.Color(0.1, 0.1, 0.1);
 
-    for(let i=0; i<30; i++) { 
-        let carGroup = new THREE.Group(); let body = new THREE.Mesh(carGeo, Math.random() > 0.5 ? carMat1 : carMat2); body.position.y = 0.5; carGroup.add(body);
-        let fLight = new THREE.Mesh(new THREE.BoxGeometry(2.3, 0.2, 0.2), new THREE.MeshBasicMaterial({color: glowCyan})); fLight.name = "headlight"; fLight.position.set(0, 0.4, -2.5); carGroup.add(fLight);
-        let bLight = new THREE.Mesh(new THREE.BoxGeometry(2.3, 0.2, 0.2), new THREE.MeshBasicMaterial({color: glowRed})); bLight.name = "taillight"; bLight.position.set(0, 0.4, 2.5); carGroup.add(bLight);
-        
-        let isVertical = Math.random() > 0.5; let roadIndex = Math.floor(Math.random() * 9) - 4; let roadCoord = roadIndex * gridStep; let offset = Math.random() > 0.5 ? 5 : -5; 
-        carGroup.isVertical = isVertical; carGroup.direction = offset > 0 ? 1 : -1; carGroup.speed = 25 + Math.random() * 20; carGroup.isPlayerDriven = false; carGroup.isParked = false; 
-        if (isVertical) { carGroup.position.x = roadCoord + offset; carGroup.position.z = (Math.random() - 0.5) * 500; if (carGroup.direction === -1) carGroup.rotation.y = Math.PI; } 
-        else { carGroup.position.z = roadCoord + offset; carGroup.position.x = (Math.random() - 0.5) * 500; carGroup.rotation.y = carGroup.direction === 1 ? Math.PI/2 : -Math.PI/2; }
-        carGroup.position.y = -0.5; scene.add(carGroup); vehicles.push(carGroup);
+    // =========================================================
+    // DETAYLI ARAÇ BUILDER
+    // =========================================================
+    const CAR_PALETTES = [
+        { body: 0x0a0a1a, trim: 0x00aaff, glass: 0x001833, neon: new THREE.Color(0,2,4) },  // koyu mavi / cyan
+        { body: 0x1a0505, trim: 0xff2200, glass: 0x1a0000, neon: new THREE.Color(3,0,0) },  // koyu kırmızı / kızıl
+        { body: 0x080808, trim: 0xaa00ff, glass: 0x0a0010, neon: new THREE.Color(1.5,0,3) },// siyah / mor
+        { body: 0x001a0a, trim: 0x00ff88, glass: 0x001a08, neon: new THREE.Color(0,3,1) },  // koyu yeşil / neon
+        { body: 0x1a1000, trim: 0xff8800, glass: 0x120a00, neon: new THREE.Color(3,1,0) },  // koyu turuncu
+        { body: 0x101010, trim: 0xffffff, glass: 0x080808, neon: new THREE.Color(2,2,2) },  // siyah / gümüş
+    ];
+
+    function createDetailedCar(palette, isParked) {
+        const g = new THREE.Group();
+        const P = palette;
+        const bodyMat  = new THREE.MeshStandardMaterial({ color: P.body,  metalness: 0.92, roughness: 0.15 });
+        const trimMat  = new THREE.MeshStandardMaterial({ color: P.trim,  metalness: 1.0,  roughness: 0.05, emissive: new THREE.Color(P.trim).multiplyScalar(0.3) });
+        const glassMat = new THREE.MeshStandardMaterial({ color: P.glass, metalness: 0.1,  roughness: 0.0,  transparent: true, opacity: 0.55 });
+        const darkMat  = new THREE.MeshStandardMaterial({ color: 0x050505, metalness: 0.8,  roughness: 0.3  });
+        const rubberMat= new THREE.MeshStandardMaterial({ color: 0x111111, metalness: 0.0,  roughness: 0.95 });
+        const rimMat   = new THREE.MeshStandardMaterial({ color: 0x888888, metalness: 1.0,  roughness: 0.1  });
+        const lightMat = new THREE.MeshBasicMaterial({ color: isParked ? noGlow : glowCyan });
+        const tailMat  = new THREE.MeshBasicMaterial({ color: isParked ? noGlow : glowRed  });
+        const neonMat  = new THREE.MeshBasicMaterial({ color: P.neon, transparent: true, opacity: isParked ? 0.4 : 0.85 });
+
+        // --- ANA GÖVDE ---
+        // Alt kısım (geniş)
+        const lowerBody = new THREE.Mesh(new THREE.BoxGeometry(2.5, 0.7, 5.0), bodyMat);
+        lowerBody.position.y = 0.45; g.add(lowerBody);
+        // Üst kabin
+        const cabin = new THREE.Mesh(new THREE.BoxGeometry(2.1, 0.65, 2.6), bodyMat);
+        cabin.position.set(0, 1.15, -0.1); g.add(cabin);
+        // Ön kaput eğimi
+        const hood = new THREE.Mesh(new THREE.BoxGeometry(2.4, 0.12, 1.4), bodyMat);
+        hood.position.set(0, 0.86, -1.6); hood.rotation.x = 0.18; g.add(hood);
+        // Arka bagaj
+        const trunk = new THREE.Mesh(new THREE.BoxGeometry(2.4, 0.18, 0.9), bodyMat);
+        trunk.position.set(0, 0.88, 1.75); g.add(trunk);
+        // Ön tampon
+        const fBumper = new THREE.Mesh(new THREE.BoxGeometry(2.5, 0.28, 0.18), darkMat);
+        fBumper.position.set(0, 0.28, -2.59); g.add(fBumper);
+        // Arka tampon
+        const rBumper = new THREE.Mesh(new THREE.BoxGeometry(2.5, 0.28, 0.18), darkMat);
+        rBumper.position.set(0, 0.28, 2.59); g.add(rBumper);
+        // Trim şeridi (iki yanda)
+        [-1.26, 1.26].forEach(x => {
+            const trim = new THREE.Mesh(new THREE.BoxGeometry(0.06, 0.08, 4.6), trimMat);
+            trim.position.set(x, 0.6, 0); g.add(trim);
+        });
+        // Ön ızgara
+        const grill = new THREE.Mesh(new THREE.BoxGeometry(1.6, 0.22, 0.08), darkMat);
+        grill.position.set(0, 0.5, -2.52); g.add(grill);
+        const grillAccent = new THREE.Mesh(new THREE.BoxGeometry(1.5, 0.06, 0.1), trimMat);
+        grillAccent.position.set(0, 0.5, -2.52); g.add(grillAccent);
+
+        // --- CAM ---
+        // Ön cam
+        const windshield = new THREE.Mesh(new THREE.BoxGeometry(1.95, 0.55, 0.08), glassMat);
+        windshield.position.set(0, 1.12, -1.3); windshield.rotation.x = -0.35; g.add(windshield);
+        // Arka cam
+        const rearWin = new THREE.Mesh(new THREE.BoxGeometry(1.9, 0.45, 0.08), glassMat);
+        rearWin.position.set(0, 1.1, 1.1); rearWin.rotation.x = 0.35; g.add(rearWin);
+        // Yan camlar
+        [-1.06, 1.06].forEach(x => {
+            const sw = new THREE.Mesh(new THREE.BoxGeometry(0.06, 0.38, 1.1), glassMat);
+            sw.position.set(x, 1.15, -0.18); g.add(sw);
+        });
+
+        // --- FARLAR (ön) ---
+        const fLightL = new THREE.Mesh(new THREE.BoxGeometry(0.65, 0.18, 0.12), lightMat);
+        fLightL.name = "headlight"; fLightL.position.set(-0.85, 0.72, -2.52); g.add(fLightL);
+        const fLightR = new THREE.Mesh(new THREE.BoxGeometry(0.65, 0.18, 0.12), lightMat);
+        fLightR.name = "headlight"; fLightR.position.set(0.85, 0.72, -2.52); g.add(fLightR);
+        // Far lens halkası
+        [-0.85, 0.85].forEach(x => {
+            const ring = new THREE.Mesh(new THREE.BoxGeometry(0.62, 0.04, 0.1), trimMat);
+            ring.position.set(x, 0.82, -2.52); g.add(ring);
+        });
+
+        // --- STOP LAMBALARI (arka) ---
+        const tLightL = new THREE.Mesh(new THREE.BoxGeometry(0.65, 0.2, 0.12), tailMat);
+        tLightL.name = "taillight"; tLightL.position.set(-0.85, 0.72, 2.52); g.add(tLightL);
+        const tLightR = new THREE.Mesh(new THREE.BoxGeometry(0.65, 0.2, 0.12), tailMat);
+        tLightR.name = "taillight"; tLightR.position.set(0.85, 0.72, 2.52); g.add(tLightR);
+
+        // --- TEKERLEKLER (4 adet) ---
+        const wheelPositions = [
+            { x: -1.3, z: -1.55 }, { x: 1.3, z: -1.55 },
+            { x: -1.3, z:  1.55 }, { x: 1.3, z:  1.55 },
+        ];
+        g._wheels = [];
+        wheelPositions.forEach(wp => {
+            const wg = new THREE.Group();
+            // Lastik
+            const tire = new THREE.Mesh(new THREE.CylinderGeometry(0.42, 0.42, 0.28, 14), rubberMat);
+            tire.rotation.z = Math.PI / 2; wg.add(tire);
+            // Jant
+            const rim = new THREE.Mesh(new THREE.CylinderGeometry(0.26, 0.26, 0.3, 10), rimMat);
+            rim.rotation.z = Math.PI / 2; wg.add(rim);
+            // Jant delik detayı
+            for(let s=0; s<5; s++) {
+                const spoke = new THREE.Mesh(new THREE.BoxGeometry(0.04, 0.22, 0.32), rimMat);
+                spoke.rotation.z = (s / 5) * Math.PI * 2; wg.add(spoke);
+            }
+            wg.position.set(wp.x, 0.42, wp.z);
+            g.add(wg); g._wheels.push(wg);
+        });
+
+        // --- NEON UNDERGLOW ---
+        const neonUnder = new THREE.Mesh(new THREE.BoxGeometry(2.3, 0.04, 4.6), neonMat);
+        neonUnder.position.y = 0.04; g.add(neonUnder);
+
+        // --- EGZOZ ---
+        const exh = new THREE.Mesh(new THREE.CylinderGeometry(0.07, 0.09, 0.35, 8), darkMat);
+        exh.rotation.x = Math.PI/2; exh.position.set(0.7, 0.22, 2.62); g.add(exh);
+
+        // --- ROOT Y offset — araçlar zeminde oturur ---
+        g.position.y = -0.5;
+        return g;
     }
-    
-    for(let i=0; i<20; i++) { 
-        let carGroup = new THREE.Group(); let body = new THREE.Mesh(carGeo, Math.random() > 0.5 ? carMat1 : carMat2); body.position.y = 0.5; carGroup.add(body);
-        let fLight = new THREE.Mesh(new THREE.BoxGeometry(2.3, 0.2, 0.2), new THREE.MeshBasicMaterial({color: noGlow})); fLight.name = "headlight"; fLight.position.set(0, 0.4, -2.5); carGroup.add(fLight); 
-        let bLight = new THREE.Mesh(new THREE.BoxGeometry(2.3, 0.2, 0.2), new THREE.MeshBasicMaterial({color: noGlow})); bLight.name = "taillight"; bLight.position.set(0, 0.4, 2.5); carGroup.add(bLight);
-        
-        let isVertical = Math.random() > 0.5; let roadIndex = Math.floor(Math.random() * 9) - 4; let roadCoord = roadIndex * gridStep; let offset = Math.random() > 0.5 ? 12 : -12; 
-        carGroup.isVertical = isVertical; carGroup.direction = 1; carGroup.speed = 0; carGroup.isPlayerDriven = false; carGroup.isParked = true; 
-        if (isVertical) { carGroup.position.x = roadCoord + offset; carGroup.position.z = (Math.random() - 0.5) * 500; } else { carGroup.position.z = roadCoord + offset; carGroup.position.x = (Math.random() - 0.5) * 500; carGroup.rotation.y = Math.PI/2; }
-        carGroup.position.y = -0.5; scene.add(carGroup); vehicles.push(carGroup);
+
+    // Hareketli araçlar
+    for(let i=0; i<30; i++) {
+        const palette = CAR_PALETTES[Math.floor(Math.random() * CAR_PALETTES.length)];
+        let carGroup = createDetailedCar(palette, false);
+        let isVertical = Math.random() > 0.5; let roadIndex = Math.floor(Math.random() * 9) - 4;
+        let roadCoord = roadIndex * gridStep; let offset = Math.random() > 0.5 ? 5 : -5;
+        carGroup.isVertical = isVertical; carGroup.direction = offset > 0 ? 1 : -1;
+        carGroup.speed = 25 + Math.random() * 20; carGroup.isPlayerDriven = false; carGroup.isParked = false;
+        if(isVertical) { carGroup.position.x = roadCoord + offset; carGroup.position.z = (Math.random()-0.5)*500; if(carGroup.direction===-1) carGroup.rotation.y = Math.PI; }
+        else { carGroup.position.z = roadCoord + offset; carGroup.position.x = (Math.random()-0.5)*500; carGroup.rotation.y = carGroup.direction===1 ? Math.PI/2 : -Math.PI/2; }
+        scene.add(carGroup); vehicles.push(carGroup);
+    }
+
+    // Park edilmiş araçlar
+    for(let i=0; i<20; i++) {
+        const palette = CAR_PALETTES[Math.floor(Math.random() * CAR_PALETTES.length)];
+        let carGroup = createDetailedCar(palette, true);
+        let isVertical = Math.random() > 0.5; let roadIndex = Math.floor(Math.random() * 9) - 4;
+        let roadCoord = roadIndex * gridStep; let offset = Math.random() > 0.5 ? 12 : -12;
+        carGroup.isVertical = isVertical; carGroup.direction = 1; carGroup.speed = 0;
+        carGroup.isPlayerDriven = false; carGroup.isParked = true;
+        if(isVertical) { carGroup.position.x = roadCoord + offset; carGroup.position.z = (Math.random()-0.5)*500; }
+        else { carGroup.position.z = roadCoord + offset; carGroup.position.x = (Math.random()-0.5)*500; carGroup.rotation.y = Math.PI/2; }
+        scene.add(carGroup); vehicles.push(carGroup);
     }
 
     const playerGeo = new THREE.BoxGeometry(1.2, 2.4, 1.2); const playerMat = new THREE.MeshBasicMaterial({ color: glowCyan, wireframe: true });
@@ -951,12 +1073,170 @@ window.onload = function() {
         }
     }
 
-    const npcGeo = new THREE.BoxGeometry(1, 2, 1); 
+    const npcGeo = new THREE.BoxGeometry(1, 2, 1); // Geriye dönük uyumluluk için (bounty vs. hâlâ kullanır)
     const enemies = []; const civilians = [];
-    const enemyMat = new THREE.MeshBasicMaterial({ color: glowRed, wireframe: true }); 
+    const enemyMat      = new THREE.MeshBasicMaterial({ color: glowRed, wireframe: true }); 
     const enemyEliteMat = new THREE.MeshBasicMaterial({ color: new THREE.Color(2,0,4), wireframe: false }); 
     const enemyInfectedMat = new THREE.MeshBasicMaterial({ color: new THREE.Color(0,4,0), wireframe: false });
-    const civMat = new THREE.MeshBasicMaterial({ color: new THREE.Color(0,2,4), wireframe: true }); 
+    const civMat        = new THREE.MeshBasicMaterial({ color: new THREE.Color(0,2,4), wireframe: true }); 
+
+    // =========================================================
+    // DETAYLI KARAKTER BUILDER
+    // =========================================================
+    // Renk paletleri: [kafa, gövde_üst, gövde_alt, ayak, aksesuar_emissive]
+    const CIV_PALETTES = [
+        [0x1a1a2e, 0x162447, 0x1f4068, 0x1b1b2f, new THREE.Color(0, 1.5, 3)],   // mavi-gece
+        [0x2d1b00, 0x3d2b00, 0x1a0a00, 0x0d0500, new THREE.Color(2, 0.8, 0)],    // turuncu-kahve
+        [0x0d1f0d, 0x1a3d1a, 0x0d2b0d, 0x071407, new THREE.Color(0, 2.5, 0.5)],  // yeşil
+        [0x1f0d1f, 0x3d1a3d, 0x2b0d2b, 0x14071a, new THREE.Color(2, 0, 3)],      // mor
+        [0x1f1f1f, 0x2d2d2d, 0x1a1a1a, 0x0d0d0d, new THREE.Color(2, 2, 2)],      // siyah-gri
+        [0x1f0a0a, 0x3d1515, 0x2b0a0a, 0x140505, new THREE.Color(3, 0.2, 0.2)],  // kırmızı
+    ];
+    const ENEMY_PALETTES = [
+        [0x1a0000, 0x2d0000, 0x1a0000, 0x0d0000, new THREE.Color(3, 0, 0)],      // kırmızı düşman
+        [0x1a001a, 0x2d002d, 0x1a0014, 0x0d000d, new THREE.Color(2, 0, 3)],      // mor elit
+    ];
+
+    function buildCharacterGroup(type, isElite) {
+        const root = new THREE.Group();
+        const palette = type === 'civilian'
+            ? CIV_PALETTES[Math.floor(Math.random() * CIV_PALETTES.length)]
+            : (isElite ? ENEMY_PALETTES[1] : ENEMY_PALETTES[0]);
+
+        const [colHead, colTorso, colLeg, colFoot, emissCol] = palette;
+
+        const mHead   = new THREE.MeshStandardMaterial({ color: colHead,  metalness: 0.3, roughness: 0.7 });
+        const mTorso  = new THREE.MeshStandardMaterial({ color: colTorso, metalness: 0.5, roughness: 0.5 });
+        const mLeg    = new THREE.MeshStandardMaterial({ color: colLeg,   metalness: 0.3, roughness: 0.7 });
+        const mFoot   = new THREE.MeshStandardMaterial({ color: colFoot,  metalness: 0.8, roughness: 0.2 });
+        const mGlow   = new THREE.MeshBasicMaterial({ color: emissCol });
+        const mVisor  = new THREE.MeshStandardMaterial({ color: 0x001122,  metalness: 0.1, roughness: 0.0, transparent: true, opacity: 0.7, emissive: emissCol, emissiveIntensity: 0.5 });
+
+        // KAFA
+        const headGroup = new THREE.Group(); headGroup.position.y = 1.75;
+        const head = new THREE.Mesh(new THREE.BoxGeometry(0.52, 0.55, 0.52), mHead); headGroup.add(head);
+        // Vizör / gözlük
+        const visor = new THREE.Mesh(new THREE.BoxGeometry(0.44, 0.14, 0.08), mVisor);
+        visor.position.set(0, 0.05, 0.28); headGroup.add(visor);
+        // Aksesuar: antenleri / kask şeridi (düşmanlarda)
+        if(type !== 'civilian' || Math.random() > 0.5) {
+            const stripe = new THREE.Mesh(new THREE.BoxGeometry(0.54, 0.04, 0.04), mGlow);
+            stripe.position.set(0, 0.28, 0); headGroup.add(stripe);
+        }
+        root.add(headGroup);
+
+        // BOYUN
+        const neck = new THREE.Mesh(new THREE.BoxGeometry(0.2, 0.12, 0.2), mHead);
+        neck.position.y = 1.44; root.add(neck);
+
+        // GÖVDE (üst)
+        const torso = new THREE.Mesh(new THREE.BoxGeometry(0.72, 0.72, 0.38), mTorso);
+        torso.position.y = 1.0; root.add(torso);
+        // Göğüs detayı / rozet
+        const badge = new THREE.Mesh(new THREE.BoxGeometry(0.18, 0.08, 0.04), mGlow);
+        badge.position.set(0.18, 1.08, 0.2); root.add(badge);
+        // Bel şeridi
+        const belt = new THREE.Mesh(new THREE.BoxGeometry(0.74, 0.07, 0.4), mFoot);
+        belt.position.y = 0.62; root.add(belt);
+
+        // KOL GRUPLARI (L/R) — omuzdan pivot
+        root._armL = new THREE.Group(); root._armL.position.set(-0.46, 1.28, 0); root.add(root._armL);
+        root._armR = new THREE.Group(); root._armR.position.set( 0.46, 1.28, 0); root.add(root._armR);
+        [root._armL, root._armR].forEach((ag, i) => {
+            // Üst kol
+            const upperArm = new THREE.Mesh(new THREE.BoxGeometry(0.22, 0.42, 0.22), mTorso);
+            upperArm.position.y = -0.21; ag.add(upperArm);
+            // Dirsek pivot
+            const elbowG = new THREE.Group(); elbowG.position.y = -0.42;
+            // Alt kol
+            const lowerArm = new THREE.Mesh(new THREE.BoxGeometry(0.18, 0.38, 0.18), mLeg);
+            lowerArm.position.y = -0.19; elbowG.add(lowerArm);
+            // El
+            const hand = new THREE.Mesh(new THREE.BoxGeometry(0.2, 0.18, 0.14), mHead);
+            hand.position.y = -0.42; elbowG.add(hand);
+            ag.add(elbowG);
+            ag._elbow = elbowG;
+        });
+
+        // BACAK GRUPLARI (L/R) — kalçadan pivot
+        root._legL = new THREE.Group(); root._legL.position.set(-0.22, 0.58, 0); root.add(root._legL);
+        root._legR = new THREE.Group(); root._legR.position.set( 0.22, 0.58, 0); root.add(root._legR);
+        [root._legL, root._legR].forEach((lg, i) => {
+            // Üst bacak
+            const thigh = new THREE.Mesh(new THREE.BoxGeometry(0.26, 0.44, 0.26), mLeg);
+            thigh.position.y = -0.22; lg.add(thigh);
+            // Diz pivot
+            const kneeG = new THREE.Group(); kneeG.position.y = -0.44;
+            // Alt bacak
+            const shin = new THREE.Mesh(new THREE.BoxGeometry(0.22, 0.40, 0.22), mLeg);
+            shin.position.y = -0.20; kneeG.add(shin);
+            // Ayak
+            const foot = new THREE.Mesh(new THREE.BoxGeometry(0.24, 0.12, 0.34), mFoot);
+            foot.position.set(0, -0.44, 0.06); kneeG.add(foot);
+            // Ayak aksanı
+            const footGlow = new THREE.Mesh(new THREE.BoxGeometry(0.25, 0.04, 0.32), mGlow);
+            footGlow.position.set(0, -0.38, 0.06); kneeG.add(footGlow);
+            lg.add(kneeG);
+            lg._knee = kneeG;
+        });
+
+        // SİLAH (düşmanlarda her zaman, sivillerde %30)
+        if(type !== 'civilian' || Math.random() < 0.3) {
+            const gunG = new THREE.Group(); gunG.position.set(0, -0.38, -0.04);
+            const gunBody = new THREE.Mesh(new THREE.BoxGeometry(0.1, 0.14, 0.44), mFoot);
+            gunG.add(gunBody);
+            const barrel = new THREE.Mesh(new THREE.BoxGeometry(0.06, 0.06, 0.28), mFoot);
+            barrel.position.set(0, 0.02, -0.36); gunG.add(barrel);
+            const glowStripe = new THREE.Mesh(new THREE.BoxGeometry(0.11, 0.04, 0.40), mGlow);
+            glowStripe.position.set(0, 0.08, 0); gunG.add(glowStripe);
+            root._armR._elbow.add(gunG);
+            root._hasGun = true;
+        }
+
+        // Animasyon fazı (her karakter farklı)
+        root._animPhase = Math.random() * Math.PI * 2;
+        root._headGroup = headGroup;
+        root._isEnemy = type !== 'civilian';
+
+        return root;
+    }
+
+    function spawnEntity(isArray, type, maxCount) {
+        if(isArray.length >= maxCount) return;
+        let isElite = false;
+        if(type === 'enemy' && GAME.wantedLevel >= 3 && Math.random() < (GAME.wantedLevel * 0.1)) isElite = true;
+
+        const charGroup = buildCharacterGroup(type, isElite);
+
+        let roadIndex = Math.floor(Math.random() * 9) - 4;
+        let roadCoord = roadIndex * gridStep;
+        let offset = Math.random() > 0.5 ? 12 : -12;
+        let isVert = Math.random() > 0.5;
+        charGroup.isVert = isVert;
+        charGroup.direction = Math.random() > 0.5 ? 1 : -1;
+        charGroup.speed = isElite ? (8 + Math.random() * 4) : (4 + Math.random() * 4);
+        let randomPosAlongRoad = (Math.random() - 0.5) * 500;
+        if(isVert) { charGroup.position.set(roadCoord + offset, 0, randomPosAlongRoad); }
+        else       { charGroup.position.set(randomPosAlongRoad, 0, roadCoord + offset); }
+        charGroup.hp      = isElite ? 250 : 100;
+        charGroup._maxHp  = charGroup.hp;
+        charGroup.isElite = isElite;
+        charGroup.isInfected = false; charGroup.infectTimer = 0; charGroup.infectTicks = 0;
+        charGroup.isBountyTarget = false;
+        // Geriye dönük uyumluluk: material getter/setter proxy
+        Object.defineProperty(charGroup, 'material', {
+            get() { return this._mat; },
+            set(m) {
+                this._mat = m;
+                this.traverse(child => { if(child.isMesh && child.material) child.material = m; });
+            },
+            configurable: true
+        });
+        charGroup._mat = type === 'civilian' ? civMat : (isElite ? enemyEliteMat : enemyMat);
+
+        scene.add(charGroup);
+        isArray.push(charGroup);
+    }
 
     // --- BOUNTY TARGET MATERIALS ---
     // Katı, parlak renkler — wireframe değil, kalabalıktan ayrışsın
@@ -1264,7 +1544,12 @@ window.onload = function() {
         let spawnZ = isEliteContract ? (-(120 + Math.random() * 80)) : (120 + Math.random() * 80);
         let spawnX = (Math.random() - 0.5) * 80;
 
-        const target = new THREE.Mesh(npcGeo, isEliteContract ? bountyTargetMatBlue : bountyTargetMatRed);
+        // Bounty hedef: detaylı karakter, özel emissive renk ile
+        const target = buildCharacterGroup('civilian', false);
+        // Tüm mesh'leri bounty rengiyle boyayın
+        const bountyMat = isEliteContract ? bountyTargetMatBlue : bountyTargetMatRed;
+        target.traverse(child => { if(child.isMesh) child.material = bountyMat; });
+
         target.isVert      = Math.random() > 0.5;
         target.direction   = Math.random() > 0.5 ? 1 : -1;
         target.speed       = 3 + Math.random() * 2;
@@ -1284,17 +1569,13 @@ window.onload = function() {
         GAME.bountyCompleted      = false;
         GAME.bountyActive         = true;
 
-        // Marker rengini kontratan ayarla
         let mCol = isEliteContract ? new THREE.Color(0, 1, 5) : new THREE.Color(5, 0.3, 0);
         markerBar.material = new THREE.MeshBasicMaterial({ color: mCol });
         markerDot.material = new THREE.MeshBasicMaterial({ color: mCol });
         bountyRingMat.color.copy(mCol);
-
-        // Markerları baştan gizle — tespit edilince açılır
         bountyMarkerGroup.visible = false;
         bountyRingMesh.visible    = false;
 
-        // HUD aç
         let bhud = document.getElementById('bounty-hud');
         if(bhud) bhud.style.display = 'block';
         document.getElementById('bh-target-desc').innerText = contractData.clueDetail || contractData.clue;
@@ -1379,20 +1660,8 @@ window.onload = function() {
         }
     }
 
-    function spawnEntity(isArray, type, maxCount) {
-        if(isArray.length >= maxCount) return; 
-        let mat = type === 'civilian' ? civMat : enemyMat; let isElite = false;
-        if (type === 'enemy' && GAME.wantedLevel >= 3 && Math.random() < (GAME.wantedLevel * 0.1)) { mat = enemyEliteMat; isElite = true; }
-        const entity = new THREE.Mesh(npcGeo, mat); 
-        let roadIndex = Math.floor(Math.random() * 9) - 4; let roadCoord = roadIndex * gridStep; let offset = Math.random() > 0.5 ? 12 : -12; let isVert = Math.random() > 0.5;
-        entity.isVert = isVert; entity.direction = Math.random() > 0.5 ? 1 : -1; entity.speed = isElite ? (8 + Math.random() * 4) : (4 + Math.random() * 4);
-        let randomPosAlongRoad = (Math.random() - 0.5) * 500;
-        if (isVert) { entity.position.set(roadCoord + offset, 0, randomPosAlongRoad); } else { entity.position.set(randomPosAlongRoad, 0, roadCoord + offset); }
-        entity.hp = isElite ? 250 : 100; entity._maxHp = entity.hp; entity.isElite = isElite; entity.isInfected = false; entity.infectTimer = 0; entity.infectTicks = 0;
-        scene.add(entity); isArray.push(entity);
-    }
     for(let i=0; i<40; i++) spawnEntity(enemies, 'enemy', 40); 
-    for(let i=0; i<100; i++) spawnEntity(civilians, 'civilian', 100); 
+    for(let i=0; i<100; i++) spawnEntity(civilians, 'civilian', 100);
 
     const lootDrops = [];
     const lootHealthGeo = new THREE.OctahedronGeometry(0.5); const lootHealthMat = new THREE.MeshBasicMaterial({ color: new THREE.Color(0,3,0), wireframe: true });
@@ -1864,12 +2133,35 @@ window.onload = function() {
                     if (car.isVertical) { car.position.z += car.direction * car.speed * gameDt; if (car.direction === 1 && car.position.z > 300) car.position.z = -300; if (car.direction === -1 && car.position.z < -300) car.position.z = 300; } 
                     else { car.position.x += car.direction * car.speed * gameDt; if (car.direction === 1 && car.position.x > 300) car.position.x = -300; if (car.direction === -1 && car.position.x < -300) car.position.x = 300; }
                 }
+                // Tekerlek dönüşü (hıza bağlı)
+                if(car._wheels && !car.isParked) {
+                    const wheelSpeed = (car.isPlayerDriven ? GAME.carSpeedRaw : car.speed * car.direction) * gameDt * 0.5;
+                    car._wheels.forEach(w => { w.rotation.x += wheelSpeed * 0.8; });
+                }
             }
 
             for (let i=0; i<civilians.length; i++) {
                 let c = civilians[i];
-                if (c.isVert) { c.position.z += c.direction * c.speed * gameDt; if (c.position.z > 280 || c.position.z < -280) c.direction *= -1; } else { c.position.x += c.direction * c.speed * gameDt; if (c.position.x > 280 || c.position.x < -280) c.direction *= -1; }
-                c.rotation.y = c.isVert ? (c.direction === 1 ? 0 : Math.PI) : (c.direction === 1 ? Math.PI/2 : -Math.PI/2); c.position.y = 0 + Math.sin(now * 0.005 + c.position.x + c.position.z) * 0.1; 
+                if(c.isBountyTarget || !c._legL) {
+                    // Bounty hedef veya eski stil mesh: eski hareket
+                    if (c.isVert) { c.position.z += c.direction * c.speed * gameDt; if (c.position.z > 280 || c.position.z < -280) c.direction *= -1; } else { c.position.x += c.direction * c.speed * gameDt; if (c.position.x > 280 || c.position.x < -280) c.direction *= -1; }
+                    c.rotation.y = c.isVert ? (c.direction === 1 ? 0 : Math.PI) : (c.direction === 1 ? Math.PI/2 : -Math.PI/2);
+                    c.position.y = 0 + Math.sin(now * 0.005 + c.position.x + c.position.z) * 0.1;
+                } else {
+                    // Detaylı karakter: pozisyon güncelle
+                    if (c.isVert) { c.position.z += c.direction * c.speed * gameDt; if (c.position.z > 280 || c.position.z < -280) c.direction *= -1; } else { c.position.x += c.direction * c.speed * gameDt; if (c.position.x > 280 || c.position.x < -280) c.direction *= -1; }
+                    c.rotation.y = c.isVert ? (c.direction === 1 ? 0 : Math.PI) : (c.direction === 1 ? Math.PI/2 : -Math.PI/2);
+                    c.position.y = 0;
+                    // Yürüme animasyonu
+                    const phase = now * 0.004 + c._animPhase;
+                    const stride = Math.sin(phase) * 0.38;
+                    if(c._legL) { c._legL.rotation.x = stride; c._legL._knee.rotation.x = Math.max(0, -stride * 0.5); }
+                    if(c._legR) { c._legR.rotation.x = -stride; c._legR._knee.rotation.x = Math.max(0, stride * 0.5); }
+                    if(c._armL) { c._armL.rotation.x = -stride * 0.5; c._armL._elbow.rotation.x = Math.max(0, stride * 0.3); }
+                    if(c._armR) { c._armR.rotation.x =  stride * 0.5; c._armR._elbow.rotation.x = Math.max(0, -stride * 0.3); }
+                    // Hafif kafa sallama
+                    if(c._headGroup) c._headGroup.rotation.y = Math.sin(phase * 0.5) * 0.06;
+                }
             }
 
             // Bounty hunt sistemi güncelle
@@ -1987,6 +2279,29 @@ window.onload = function() {
                     if(Math.random() < fireRate * GAME.timeScale && _vDir.lengthSq() > 0) { let aimDir = new THREE.Vector3().subVectors(playerMesh.position, e.position).normalize(); shoot(e.position.clone().add(new THREE.Vector3(0,0.5,0)), aimDir, false); }
                 }
                 e.position.y = 0 + Math.sin(now * 0.003 + e.position.x) * 0.2;
+
+                // Detaylı karakter animasyonu
+                if(e._legL) {
+                    const inCombat = playerMesh.position.distanceTo(e.position) < 28;
+                    const phase = now * 0.005 + e._animPhase;
+                    const moveStride = inCombat ? 0.28 : 0.42;
+                    const legSwing = Math.sin(phase) * moveStride;
+                    e._legL.rotation.x = legSwing;  e._legL._knee.rotation.x = Math.max(0, -legSwing * 0.5);
+                    e._legR.rotation.x = -legSwing; e._legR._knee.rotation.x = Math.max(0, legSwing * 0.5);
+                    if(inCombat) {
+                        // Ateş ederken kol düşmana nişan alır
+                        const toPlayer = new THREE.Vector3().subVectors(playerMesh.position, e.position);
+                        const aimPitch = -Math.atan2(toPlayer.y, Math.sqrt(toPlayer.x**2 + toPlayer.z**2));
+                        e._armR.rotation.x = aimPitch - 0.4;
+                        e._armL.rotation.x = aimPitch - 0.3;
+                        if(e._armR._elbow) e._armR._elbow.rotation.x = 0.5;
+                        if(e._armL._elbow) e._armL._elbow.rotation.x = 0.4;
+                    } else {
+                        e._armL.rotation.x = -legSwing * 0.45; if(e._armL._elbow) e._armL._elbow.rotation.x = Math.max(0,  legSwing * 0.25);
+                        e._armR.rotation.x =  legSwing * 0.45; if(e._armR._elbow) e._armR._elbow.rotation.x = Math.max(0, -legSwing * 0.25);
+                    }
+                    if(e._headGroup) e._headGroup.rotation.y = Math.sin(phase * 0.4) * 0.05;
+                }
             }
 
             // Datarun sistemi güncelle
