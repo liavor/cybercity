@@ -625,25 +625,25 @@ window.onload = function() {
     // Kural: ambientIntensity MAX 0.28 — wireframe/neon estetiği asla yanmasın
     // dirLight zemini boyar ama intensity düşük tutulur
     const SKY_KEYS = [
-        // gece yarısı — deep cyberpunk dark
-        [0.00, 0x00010a, 0x00010a, 0x0a1428, 0.10, 0x1133aa, 0.12],
+        // gece yarısı — neonlar zemine hafif yansıma yapar
+        [0.00, 0x00010a, 0x00010a, 0x0a1e3a, 0.18, 0x1133aa, 0.12],
         // şafak kızıllığı
-        [0.22, 0x0d0501, 0x0d0501, 0x2a1008, 0.14, 0xcc3300, 0.30],
-        // gün doğumu — Vice City pembesi
-        [0.27, 0x7a2010, 0x5a1808, 0x3a1808, 0.20, 0xff6020, 0.45],
-        // sabah — Vice City sıcak mavi-pembe
-        [0.35, 0x1a2a4a, 0x102035, 0x151e30, 0.22, 0xffcc88, 0.40],
-        // öğle — Vice City parlak gökyüzü ama ambient LOW
-        [0.50, 0x1c3055, 0x122040, 0x182030, 0.25, 0xffeebb, 0.38],
-        // ikindi — hafif sarı ton
-        [0.65, 0x1a2840, 0x101c30, 0x181c28, 0.22, 0xffdd99, 0.38],
-        // gün batımı — turuncu-kızıl gökyüzü
-        [0.73, 0x5a1a05, 0x3a1003, 0x2a1005, 0.18, 0xff5500, 0.50],
-        // alacakaranlık — koyu mor
-        [0.80, 0x08030f, 0x05020a, 0x10082a, 0.12, 0x4411aa, 0.20],
-        // gece — tam cyberpunk
-        [0.90, 0x00010a, 0x00010a, 0x0a1428, 0.10, 0x1133aa, 0.12],
-        [1.00, 0x00010a, 0x00010a, 0x0a1428, 0.10, 0x1133aa, 0.12],
+        [0.22, 0x0d0501, 0x0d0501, 0x2a1008, 0.18, 0xcc3300, 0.30],
+        // gün doğumu
+        [0.27, 0x7a2010, 0x5a1808, 0x3a1808, 0.22, 0xff6020, 0.45],
+        // sabah
+        [0.35, 0x1a2a4a, 0x102035, 0x151e30, 0.24, 0xffcc88, 0.40],
+        // öğle
+        [0.50, 0x1c3055, 0x122040, 0x182030, 0.27, 0xffeebb, 0.38],
+        // ikindi
+        [0.65, 0x1a2840, 0x101c30, 0x181c28, 0.24, 0xffdd99, 0.38],
+        // gün batımı
+        [0.73, 0x5a1a05, 0x3a1003, 0x2a1005, 0.20, 0xff5500, 0.50],
+        // alacakaranlık
+        [0.80, 0x08030f, 0x05020a, 0x10082a, 0.18, 0x4411aa, 0.20],
+        // gece
+        [0.90, 0x00010a, 0x00010a, 0x0a1e3a, 0.18, 0x1133aa, 0.12],
+        [1.00, 0x00010a, 0x00010a, 0x0a1e3a, 0.18, 0x1133aa, 0.12],
     ];
 
     function _lerpSkyKey(t) {
@@ -767,7 +767,13 @@ window.onload = function() {
     }
 
     const roadTex = createRoadTexture(); roadTex.repeat.set(10, 10); 
-    const roadMat = new THREE.MeshStandardMaterial({ map: roadTex, color: 0xcccccc, roughness: 0.15, metalness: 0.85 });
+    // Zemin: metalness düşük, roughness yüksek — asfalt parlamamalı
+    // emissive: gece zemin tamamen kararmayı önleyen çok düşük bir taban ışık
+    const roadMat = new THREE.MeshStandardMaterial({ 
+        map: roadTex, color: 0x888888, roughness: 0.92, metalness: 0.06,
+        emissive: new THREE.Color(0.012, 0.018, 0.025),  // çok düşük mavi-cyan zemin parıltısı
+        emissiveIntensity: 1.0
+    });
     const cityFloor = new THREE.Mesh(new THREE.PlaneGeometry(600, 600), roadMat); cityFloor.rotation.x = -Math.PI / 2; cityFloor.position.y = -1; worldGroup.add(cityFloor); floorMeshes.push(cityFloor);
 
     const bMatGecekondu = new THREE.MeshStandardMaterial({ map: createBuildingTexture(180), roughness: 0.8, metalness: 0.2, emissive: 0x004444 }); 
@@ -804,7 +810,111 @@ window.onload = function() {
         }
     }
 
-    const vehicles = [];
+    // =========================================================
+    // ŞEHİR SINIRLARI — Plaj, Okyanus ve İskele (GTA Vice City ruhu)
+    // =========================================================
+    const CITY_HALF = 300; // şehir asfaltı 600x600 = ±300
+
+    // --- PLAJ ZEMİNİ (şehrin doğu kenarı, x > 300) ---
+    const sandMat = new THREE.MeshStandardMaterial({ color: 0xc8a96e, roughness: 0.98, metalness: 0.0 });
+    const beach = new THREE.Mesh(new THREE.PlaneGeometry(120, 700), sandMat);
+    beach.rotation.x = -Math.PI / 2; beach.position.set(360, -1.02, 0); worldGroup.add(beach);
+
+    // Plaj dolgulama: küçük kum tepecikleri
+    for(let i = 0; i < 30; i++) {
+        const dune = new THREE.Mesh(
+            new THREE.SphereGeometry(2 + Math.random()*3, 8, 4),
+            sandMat
+        );
+        dune.scale.y = 0.25;
+        dune.position.set(310 + Math.random()*90, -0.88, (Math.random()-0.5)*650);
+        worldGroup.add(dune);
+    }
+
+    // --- SÖRF BARASI / STANT (plajda küçük yapılar) ---
+    const beachHutMat = new THREE.MeshStandardMaterial({ color: 0x8B4513, roughness: 0.9, metalness: 0.0 });
+    const roofMat     = new THREE.MeshStandardMaterial({ color: 0xcc2200, roughness: 0.95, metalness: 0.0 });
+    [[330, 60],[355, -80],[340, 180],[350, -200]].forEach(([bx, bz]) => {
+        const hut = new THREE.Mesh(new THREE.BoxGeometry(5,3,4), beachHutMat);
+        hut.position.set(bx, 0.5, bz); worldGroup.add(hut);
+        const roof = new THREE.Mesh(new THREE.BoxGeometry(6,0.5,5), roofMat);
+        roof.position.set(bx, 2.2, bz); worldGroup.add(roof);
+    });
+
+    // --- SU (okyanous) ---
+    const oceanMat = new THREE.MeshStandardMaterial({
+        color: 0x004477, roughness: 0.05, metalness: 0.15,
+        transparent: true, opacity: 0.82,
+        emissive: new THREE.Color(0, 0.03, 0.08)
+    });
+    const ocean = new THREE.Mesh(new THREE.PlaneGeometry(600, 700), oceanMat);
+    ocean.rotation.x = -Math.PI / 2; ocean.position.set(720, -1.05, 0); worldGroup.add(ocean);
+    // Su animasyonu için referans
+    ocean._mat = oceanMat;
+
+    // Kıyı çizgisi (köpük efekti — ince açık şerit)
+    const foamMat = new THREE.MeshStandardMaterial({ color: 0xddeeff, roughness: 1.0, metalness: 0.0, transparent: true, opacity: 0.55 });
+    const foam = new THREE.Mesh(new THREE.PlaneGeometry(4, 700), foamMat);
+    foam.rotation.x = -Math.PI / 2; foam.position.set(422, -0.99, 0); worldGroup.add(foam);
+
+    // --- İSKELE (pier) ---
+    const pierMat = new THREE.MeshStandardMaterial({ color: 0x5C3A1E, roughness: 0.95, metalness: 0.0 });
+    const pierDeck = new THREE.Mesh(new THREE.BoxGeometry(8, 0.4, 80), pierMat);
+    pierDeck.position.set(460, -0.8, -60); worldGroup.add(pierDeck);
+    // İskele ayakları
+    for(let pz = -95; pz <= -25; pz += 14) {
+        [-463, -457].forEach(px => {
+            const leg = new THREE.Mesh(new THREE.CylinderGeometry(0.35, 0.35, 3), pierMat);
+            leg.position.set(460 + (px+460), -2, pz); worldGroup.add(leg);
+        });
+    }
+    // İskele lambası (neon)
+    const pierLampMat = new THREE.MeshBasicMaterial({ color: new THREE.Color(2, 1.5, 0) });
+    [[-95],[-75],[-55],[-35],[-15]].forEach(([pz]) => {
+        const lamp = new THREE.Mesh(new THREE.SphereGeometry(0.4, 6, 6), pierLampMat);
+        lamp.position.set(460, 1.2, pz); worldGroup.add(lamp);
+    });
+
+    // --- PALMIYE AĞAÇLARI (plajda) ---
+    const trunkMat = new THREE.MeshStandardMaterial({ color: 0x6B4226, roughness: 0.95, metalness: 0.0 });
+    const leafMat  = new THREE.MeshStandardMaterial({ color: 0x1a5c1a, roughness: 0.8,  metalness: 0.0 });
+    function createPalm(x, z) {
+        const h = 7 + Math.random() * 4;
+        // Gövde (hafif eğri simülasyonu — 3 dilim)
+        [0, h*0.4, h*0.75].forEach((y, i) => {
+            const seg = new THREE.Mesh(new THREE.CylinderGeometry(0.28-i*0.06, 0.35-i*0.04, h*0.38, 7), trunkMat);
+            seg.position.set(x + i*0.3, y - 1 + h*0.19, z); seg.rotation.z = i * 0.06; worldGroup.add(seg);
+        });
+        // Yapraklar (5 düzlemsel yaprak)
+        for(let li = 0; li < 5; li++) {
+            const leaf = new THREE.Mesh(new THREE.BoxGeometry(0.2, 0.08, 3.5), leafMat);
+            leaf.position.set(x + Math.cos(li/5*Math.PI*2)*1.4, h - 1, z + Math.sin(li/5*Math.PI*2)*1.4);
+            leaf.rotation.y = (li/5)*Math.PI*2; leaf.rotation.z = 0.4; worldGroup.add(leaf);
+        }
+    }
+    [[305,120],[318,-50],[308,250],[322,-180],[312,30],[325,-280],[310,310],[320,-310],[315,170]].forEach(([px,pz]) => createPalm(px,pz));
+
+    // --- GÜNEYDEKİ KÖPRÜ (kuzey/güney geçiş) ---
+    const bridgeMat = new THREE.MeshStandardMaterial({ color: 0x333333, roughness: 0.7, metalness: 0.4 });
+    // Köprü yüzeyi
+    const bridgeDeck = new THREE.Mesh(new THREE.BoxGeometry(12, 0.6, 80), bridgeMat);
+    bridgeDeck.position.set(360, -0.7, -200); worldGroup.add(bridgeDeck);
+    // Köprü korkulukları
+    [-5.5, 5.5].forEach(bx => {
+        const rail = new THREE.Mesh(new THREE.BoxGeometry(0.3, 1.2, 80), bridgeMat);
+        rail.position.set(360 + bx, 0.2, -200); worldGroup.add(rail);
+    });
+
+    // Plaj zemini — RTS click için floorMeshes'e ekle
+    floorMeshes.push(beach);
+
+    // --- YUMUŞAK SINIR (duvar yok, görünmez bariyer) ---
+    // Sınır kontrolü playerMesh hareket kodunda yapılır (checkCollision zaten var)
+    // Ek olarak: sınıra yaklaşınca sis yoğunlaşır (playerUpdate'te)
+    const WORLD_BOUND = 310; // oyuncu bu koordinatı geçemez
+
+    // Okyanus animasyon referansı (animate loop'ta kullanılır)
+    let _oceanTime = 0;
     const glowCyan = new THREE.Color(0, 3, 3); const glowRed = new THREE.Color(3, 0, 0); const noGlow = new THREE.Color(0.1, 0.1, 0.1);
 
     // =========================================================
@@ -929,6 +1039,7 @@ window.onload = function() {
     }
 
     // Hareketli araçlar
+    const vehicles = [];
     for(let i=0; i<30; i++) {
         const palette = CAR_PALETTES[Math.floor(Math.random() * CAR_PALETTES.length)];
         let carGroup = createDetailedCar(palette, false);
@@ -961,8 +1072,8 @@ window.onload = function() {
     const gunGroup = new THREE.Group(); gunGroup.visible = false; 
     const gunBody = new THREE.Mesh(new THREE.BoxGeometry(0.15, 0.2, 0.7), new THREE.MeshStandardMaterial({ color: 0x111111, metalness: 0.9, roughness: 0.3 })); gunBody.position.set(0.4, -0.3, -0.5); gunGroup.add(gunBody);
     const barrel = new THREE.Mesh(new THREE.BoxGeometry(0.08, 0.08, 0.4), new THREE.MeshStandardMaterial({ color: 0x050505, metalness: 1.0, roughness: 0.1 })); barrel.position.set(0.4, -0.25, -0.9); gunGroup.add(barrel);
-    const stripe = new THREE.Mesh(new THREE.BoxGeometry(0.16, 0.05, 0.5), new THREE.MeshBasicMaterial({ color: glowCyan })); stripe.position.set(0.4, -0.22, -0.5); gunGroup.add(stripe);
-    const muzzleMesh = new THREE.Mesh(new THREE.PlaneGeometry(0.5, 0.5), new THREE.MeshBasicMaterial({ color: new THREE.Color(4,4,0), transparent: true, opacity: 0 })); muzzleMesh.position.set(0.4, -0.25, -1.2); gunGroup.add(muzzleMesh);
+    const stripe = new THREE.Mesh(new THREE.BoxGeometry(0.16, 0.04, 0.5), new THREE.MeshBasicMaterial({ color: new THREE.Color(0, 0.3, 0.4) })); stripe.position.set(0.4, -0.22, -0.5); gunGroup.add(stripe);
+    const muzzleMesh = new THREE.Mesh(new THREE.PlaneGeometry(0.4, 0.4), new THREE.MeshBasicMaterial({ color: new THREE.Color(1.5, 1.2, 0), transparent: true, opacity: 0 })); muzzleMesh.position.set(0.4, -0.25, -1.2); gunGroup.add(muzzleMesh);
     camera.add(gunGroup); scene.add(camera);
 
     // =========================================================
@@ -1026,13 +1137,12 @@ window.onload = function() {
         {x:-150,z:-200,w:14,d:7},{x:0,z:200,w:16,d:8},
     ];
     puddlePositions.forEach(p => {
-        // Her su birikintisi için rengi yakındaki bölgeye göre belirle
-        let puddleColor = p.z < -100 ? new THREE.Color(0.02, 0.04, 0.15) : 
-                          p.z > 100  ? new THREE.Color(0.1, 0.03, 0.01)  :
-                                       new THREE.Color(0.02, 0.08, 0.1);
+        let puddleColor = p.z < -100 ? new THREE.Color(0.018, 0.022, 0.03) : 
+                          p.z > 100  ? new THREE.Color(0.022, 0.018, 0.012) :
+                                       new THREE.Color(0.016, 0.020, 0.025);
         const mat = new THREE.MeshStandardMaterial({
-            color: puddleColor, roughness: 0.0, metalness: 1.0,
-            transparent: true, opacity: 0.55, envMapIntensity: 2.0
+            color: puddleColor, roughness: 0.88, metalness: 0.05,
+            transparent: true, opacity: 0.18
         });
         const m = new THREE.Mesh(puddleGeo, mat);
         m.rotation.x = -Math.PI/2;
@@ -1083,18 +1193,27 @@ window.onload = function() {
     // =========================================================
     // DETAYLI KARAKTER BUILDER
     // =========================================================
-    // Renk paletleri: [kafa, gövde_üst, gövde_alt, ayak, aksesuar_emissive]
+    // Sivil paletleri: [kafa/ten, üst giysi, alt giysi, ayak, aksesuar emissive]
+    // Tüm gövde net renklendirme — vizörden değil kıyafetten kim olduğu anlaşılır
     const CIV_PALETTES = [
-        [0x1a1a2e, 0x162447, 0x1f4068, 0x1b1b2f, new THREE.Color(0, 1.5, 3)],   // mavi-gece
-        [0x2d1b00, 0x3d2b00, 0x1a0a00, 0x0d0500, new THREE.Color(2, 0.8, 0)],    // turuncu-kahve
-        [0x0d1f0d, 0x1a3d1a, 0x0d2b0d, 0x071407, new THREE.Color(0, 2.5, 0.5)],  // yeşil
-        [0x1f0d1f, 0x3d1a3d, 0x2b0d2b, 0x14071a, new THREE.Color(2, 0, 3)],      // mor
-        [0x1f1f1f, 0x2d2d2d, 0x1a1a1a, 0x0d0d0d, new THREE.Color(2, 2, 2)],      // siyah-gri
-        [0x1f0a0a, 0x3d1515, 0x2b0a0a, 0x140505, new THREE.Color(3, 0.2, 0.2)],  // kırmızı
+        // Sarı-turuncu (kurye)
+        { skin:0xc68642, torso:0xdd8800, leg:0x995500, foot:0x3a2200, emis: new THREE.Color(2.5,1.2,0),   visor:0x331100 },
+        // Mavi-beyaz (ofis)
+        { skin:0xc68642, torso:0x1155cc, leg:0x0a3388, foot:0x0a0a2a, emis: new THREE.Color(0,1.2,3.5),   visor:0x001144 },
+        // Yeşil (sokak)
+        { skin:0xa0704a, torso:0x228822, leg:0x155515, foot:0x0a1a08, emis: new THREE.Color(0.3,2.5,0.3), visor:0x071407 },
+        // Pembe-mor (neon giyim)
+        { skin:0xc8906a, torso:0xcc2299, leg:0x881166, foot:0x220022, emis: new THREE.Color(3,0,2.5),     visor:0x1f0d1f },
+        // Kırmızı (savaşçı)
+        { skin:0xb07850, torso:0xdd1111, leg:0x991100, foot:0x220000, emis: new THREE.Color(3,0.2,0.1),   visor:0x1f0000 },
+        // Cyan-gri (teknisyen)
+        { skin:0x909090, torso:0x226688, leg:0x114455, foot:0x0a1520, emis: new THREE.Color(0,2.2,3),     visor:0x001a2a },
     ];
     const ENEMY_PALETTES = [
-        [0x1a0000, 0x2d0000, 0x1a0000, 0x0d0000, new THREE.Color(3, 0, 0)],      // kırmızı düşman
-        [0x1a001a, 0x2d002d, 0x1a0014, 0x0d000d, new THREE.Color(2, 0, 3)],      // mor elit
+        // Normal düşman: parlak kırmızı üniform — net tehdit rengi
+        { skin:0x553333, torso:0xaa1100, leg:0x770a00, foot:0x330500, emis: new THREE.Color(4,0,0),   visor:0x440000 },
+        // Elit düşman: koyu mor zırh, parlak mor neon
+        { skin:0x444466, torso:0x440088, leg:0x2a0055, foot:0x110022, emis: new THREE.Color(2.5,0,5), visor:0x110033 },
     ];
 
     function buildCharacterGroup(type, isElite) {
@@ -1103,18 +1222,16 @@ window.onload = function() {
             ? CIV_PALETTES[Math.floor(Math.random() * CIV_PALETTES.length)]
             : (isElite ? ENEMY_PALETTES[1] : ENEMY_PALETTES[0]);
 
-        const [colHead, colTorso, colLeg, colFoot, emissCol] = palette;
-
-        const mHead   = new THREE.MeshStandardMaterial({ color: colHead,  metalness: 0.3, roughness: 0.7 });
-        const mTorso  = new THREE.MeshStandardMaterial({ color: colTorso, metalness: 0.5, roughness: 0.5 });
-        const mLeg    = new THREE.MeshStandardMaterial({ color: colLeg,   metalness: 0.3, roughness: 0.7 });
-        const mFoot   = new THREE.MeshStandardMaterial({ color: colFoot,  metalness: 0.8, roughness: 0.2 });
-        const mGlow   = new THREE.MeshBasicMaterial({ color: emissCol });
-        const mVisor  = new THREE.MeshStandardMaterial({ color: 0x001122,  metalness: 0.1, roughness: 0.0, transparent: true, opacity: 0.7, emissive: emissCol, emissiveIntensity: 0.5 });
+        const mSkin  = new THREE.MeshStandardMaterial({ color: palette.skin,  metalness: 0.1, roughness: 0.85 });
+        const mTorso = new THREE.MeshStandardMaterial({ color: palette.torso, metalness: 0.3, roughness: 0.65 });
+        const mLeg   = new THREE.MeshStandardMaterial({ color: palette.leg,   metalness: 0.2, roughness: 0.70 });
+        const mFoot  = new THREE.MeshStandardMaterial({ color: palette.foot,  metalness: 0.7, roughness: 0.30 });
+        const mGlow  = new THREE.MeshBasicMaterial({ color: palette.emis });
+        const mVisor = new THREE.MeshStandardMaterial({ color: palette.visor, metalness: 0.05, roughness: 0.0, transparent: true, opacity: 0.75, emissive: palette.emis, emissiveIntensity: 0.6 });
 
         // KAFA
         const headGroup = new THREE.Group(); headGroup.position.y = 1.75;
-        const head = new THREE.Mesh(new THREE.BoxGeometry(0.52, 0.55, 0.52), mHead); headGroup.add(head);
+        const head = new THREE.Mesh(new THREE.BoxGeometry(0.52, 0.55, 0.52), mSkin); headGroup.add(head);
         // Vizör / gözlük
         const visor = new THREE.Mesh(new THREE.BoxGeometry(0.44, 0.14, 0.08), mVisor);
         visor.position.set(0, 0.05, 0.28); headGroup.add(visor);
@@ -1126,7 +1243,7 @@ window.onload = function() {
         root.add(headGroup);
 
         // BOYUN
-        const neck = new THREE.Mesh(new THREE.BoxGeometry(0.2, 0.12, 0.2), mHead);
+        const neck = new THREE.Mesh(new THREE.BoxGeometry(0.2, 0.12, 0.2), mSkin);
         neck.position.y = 1.44; root.add(neck);
 
         // GÖVDE (üst)
@@ -1152,7 +1269,7 @@ window.onload = function() {
             const lowerArm = new THREE.Mesh(new THREE.BoxGeometry(0.18, 0.38, 0.18), mLeg);
             lowerArm.position.y = -0.19; elbowG.add(lowerArm);
             // El
-            const hand = new THREE.Mesh(new THREE.BoxGeometry(0.2, 0.18, 0.14), mHead);
+            const hand = new THREE.Mesh(new THREE.BoxGeometry(0.2, 0.18, 0.14), mSkin);
             hand.position.y = -0.42; elbowG.add(hand);
             ag.add(elbowG);
             ag._elbow = elbowG;
@@ -1957,15 +2074,8 @@ window.onload = function() {
             ray.rotation.y += 0.0005;
         }
 
-        // --- SSR PUDDLE SHIMMER ---
-        for(let pm of puddleMeshes) {
-            pm.material.opacity = 0.35 + Math.sin(t*0.8 + pm._phase)*0.2;
-            // Yakın neon ışıklarına göre renk kayması
-            let col = pm._col.clone();
-            col.r += Math.sin(t*0.5 + pm._phase)*0.04;
-            col.b += Math.cos(t*0.7 + pm._phase)*0.06;
-            pm.material.color.copy(col);
-        }
+        // SSR PUDDLE — minimal, statik (asfalt gerçekçiliği)
+        // Animasyon yok — çok parlıyordu
 
         if(!GAME.isPaused) {
             // --- ŞEHİR OLAYLARI TIMER ---
@@ -2037,6 +2147,9 @@ window.onload = function() {
                 if (GAME.mode === 'RTS') {
                     const dist = playerMesh.position.distanceTo(playerTargetPos);
                     if (dist > 0.5) { _vDir.subVectors(playerTargetPos, playerMesh.position); _vDir.y = 0; if(_vDir.lengthSq() > 0) { _vDir.normalize(); playerMesh.position.add(_vDir.multiplyScalar(speed)); playerMesh.lookAt(playerTargetPos); } if(checkCollision(playerMesh.position, playerRadius)) { playerMesh.position.copy(oldPos); playerTargetPos.copy(oldPos); } }
+                    // Yumuşak sınır: RTS'te hedef noktayı sınırla
+                    playerTargetPos.x = Math.max(-WORLD_BOUND, Math.min(WORLD_BOUND+120, playerTargetPos.x));
+                    playerTargetPos.z = Math.max(-WORLD_BOUND, Math.min(WORLD_BOUND, playerTargetPos.z));
                     if(enemies.length > 0 && Math.random() < 0.08 * GAME.timeScale) {
                         let closest = null, minDist = Infinity; for(let i=0; i<enemies.length; i++) { let d = playerMesh.position.distanceTo(enemies[i].position); if(d < 40 && d < minDist) { minDist = d; closest = enemies[i]; } }
                         if(closest) {
@@ -2054,6 +2167,14 @@ window.onload = function() {
                     else { _vDir.x = GAME.moveJoy.x; _vDir.z = GAME.moveJoy.y; }
                     if(_vDir.lengthSq() > 0) { _vDir.normalize(); _vDir.applyAxisAngle(new THREE.Vector3(0,1,0), playerMesh.rotation.y); playerMesh.position.x += _vDir.x * speed * 1.5; playerMesh.position.z += _vDir.z * speed * 1.5; }
                     if(checkCollision(playerMesh.position, playerRadius)) { playerMesh.position.copy(oldPos); }
+
+                    // --- Yumuşak dünya sınırı (FPS) ---
+                    // Batı/Kuzey/Güney: sert geri it. Doğu: plaja kadar geçiş serbest
+                    const px = playerMesh.position.x, pz = playerMesh.position.z;
+                    if(px < -WORLD_BOUND)       playerMesh.position.x = -WORLD_BOUND;
+                    if(pz < -WORLD_BOUND)       playerMesh.position.z = -WORLD_BOUND;
+                    if(pz >  WORLD_BOUND)       playerMesh.position.z =  WORLD_BOUND;
+                    if(px >  WORLD_BOUND + 130) playerMesh.position.x =  WORLD_BOUND + 130; // okyanusun ortasında dur
 
                     // --- Yerçekimi + Zıplama Fiziği ---
                     const GRAVITY     = -28;   // m/s² (hızlı ama keyifli)
@@ -2166,6 +2287,12 @@ window.onload = function() {
 
             // Bounty hunt sistemi güncelle
             if(GAME.bountyActive) updateBountyHUD();
+
+            // Okyanus dalgası animasyonu
+            _oceanTime += dt;
+            ocean.position.y = -1.05 + Math.sin(_oceanTime * 0.6) * 0.06;
+            ocean._mat.opacity = 0.78 + Math.sin(_oceanTime * 0.4) * 0.04;
+            foam.position.x = 422 + Math.sin(_oceanTime * 0.5) * 1.2;
 
             if(coordDisplay) coordDisplay.innerText = `${Math.floor(playerMesh.position.x)}, ${Math.floor(playerMesh.position.z)}`;
             
