@@ -506,8 +506,9 @@ window.onload = function() {
         timeScale: 1.0, keys: { w: false, a: false, s: false, d: false, shift: false, g: false, ' ': false },
         moveJoy: { x: 0, y: 0 }, isShooting: false, lastTime: Date.now(),
         playerHealth: 100, shakeTime: 0, lastShot: 0, contractIndex: -1, currentKills: 0, isPaused: false,
-        wantedLevel: 0, isDashing: false, dashTimer: 0, dashCooldown: 0,
+        wantedLevel: 0, combatProvoked: false, isDashing: false, dashTimer: 0, dashCooldown: 0,
         isDriving: false, currentVehicle: null, carSpeedRaw: 0,
+        metroRiding: false, metroTrain: null, metroLastStation: null, metroLookYaw: 0, metroLookPitch: 0,
         // --- ZIPLAMA FİZİĞİ ---
         velocityY: 0,
         isGrounded: true,      // yerde mi?
@@ -866,8 +867,9 @@ window.onload = function() {
     ];
     const WANTED_AD = { title:'CITIZEN ALERT', sub:'YUZ TANIMA AKTIF', bg:'#160006', fg:'#ff3355', accent:'#ffffff' };
     const cityLife = {
-        windows: [], glitchSigns: [], rooftopProps: [], wetSurfaces: [], metroTrains: [],
-        airTraffic: [], shorelineFX: [], policeDrones: [], incidentPieces: [],
+        windows: [], glitchSigns: [], rooftopProps: [], wetSurfaces: [], metroTrains: [], metroStations: [],
+        airTraffic: [], shorelineFX: [], policeDrones: [], incidentPieces: [], oceanPieces: [], islandFX: [],
+        metroCurve: null, metroLength: 1,
         currentIncident: null, incidentClock: 8, incidentCooldown: 24 + Math.random()*18,
         billboardClock: 0, billboardIndex: 0, billboardWanted: false,
         zoneClock: 0, currentZone: '', ambientClock: 5,
@@ -1062,6 +1064,67 @@ window.onload = function() {
     // Su animasyonu için referans
     ocean._mat = oceanMat;
 
+    // Ada hissi: şehrin diğer kenarlarında kumsalsız deniz ve beton rıhtım
+    const islandWaterMat = oceanMat.clone();
+    islandWaterMat.opacity = 0.72;
+    const islandWater = new THREE.Mesh(new THREE.PlaneGeometry(1700, 1700), islandWaterMat);
+    islandWater.rotation.x = -Math.PI / 2; islandWater.position.set(80, -1.12, 0); worldGroup.add(islandWater);
+    cityLife.oceanPieces.push(islandWater);
+
+    const quayMat = new THREE.MeshStandardMaterial({ color: 0x181a20, roughness: 0.82, metalness: 0.35, emissive: new THREE.Color(0.015,0.025,0.035) });
+    const quayGlowMat = new THREE.MeshBasicMaterial({ color: new THREE.Color(0, 1.6, 1.8), transparent: true, opacity: 0.42, blending: THREE.AdditiveBlending });
+    function addQuay(x, z, w, d) {
+        const q = new THREE.Mesh(new THREE.PlaneGeometry(w, d), quayMat);
+        q.rotation.x = -Math.PI / 2; q.position.set(x, -0.985, z); worldGroup.add(q); floorMeshes.push(q);
+        const lip = new THREE.Mesh(new THREE.BoxGeometry(w, 0.35, 0.25), quayGlowMat);
+        lip.position.set(x, -0.78, z + d/2); worldGroup.add(lip);
+        const lip2 = lip.clone(); lip2.position.z = z - d/2; worldGroup.add(lip2);
+        return q;
+    }
+    addQuay(-340, 0, 80, 700);
+    addQuay(20, -340, 760, 80);
+    addQuay(20, 340, 760, 80);
+
+    function createUnreachableIslandAndBridge() {
+        const islandMat = new THREE.MeshStandardMaterial({ color: 0x171817, roughness: 0.95, metalness: 0.08, emissive: new THREE.Color(0.01,0.015,0.02) });
+        const farIsland = new THREE.Mesh(new THREE.CylinderGeometry(95, 130, 5, 18), islandMat);
+        farIsland.position.set(-160, -2.7, -650); farIsland.scale.z = 0.62; scene.add(farIsland);
+        const bridgeDeckMat = new THREE.MeshStandardMaterial({ color: 0x1c1f28, roughness: 0.55, metalness: 0.55 });
+        const bridgeLightMat = new THREE.MeshBasicMaterial({ color: new THREE.Color(0,2.2,3), transparent:true, opacity:0.7, blending:THREE.AdditiveBlending });
+        const farBridge = new THREE.Mesh(new THREE.BoxGeometry(18, 0.5, 260), bridgeDeckMat);
+        farBridge.position.set(0, -0.72, -470); worldGroup.add(farBridge);
+        const bridgeDriveSurface = new THREE.Mesh(new THREE.PlaneGeometry(18, 260), bridgeDeckMat);
+        bridgeDriveSurface.rotation.x = -Math.PI / 2; bridgeDriveSurface.position.set(0, -0.45, -470);
+        worldGroup.add(bridgeDriveSurface); floorMeshes.push(bridgeDriveSurface);
+        const bridgeLaneMat = new THREE.MeshBasicMaterial({ color: new THREE.Color(2.5,1.2,0), transparent:true, opacity:0.62, blending:THREE.AdditiveBlending });
+        for(let i=0; i<10; i++) {
+            const mark = new THREE.Mesh(new THREE.PlaneGeometry(1.1, 8), bridgeLaneMat);
+            mark.rotation.x = -Math.PI/2; mark.position.set(0, -0.42, -355 - i*21);
+            worldGroup.add(mark);
+        }
+        for(let i=0; i<14; i++) {
+            const z = -348 - i*18;
+            const lampL = new THREE.Mesh(new THREE.SphereGeometry(0.55, 8, 6), bridgeLightMat);
+            lampL.position.set(-8.6, 1.2, z); worldGroup.add(lampL);
+            const lampR = lampL.clone(); lampR.position.x = 8.6; worldGroup.add(lampR);
+            cityLife.islandFX.push({ mesh: lampL, phase: Math.random()*6.28 });
+            cityLife.islandFX.push({ mesh: lampR, phase: Math.random()*6.28 });
+        }
+        const gate = new THREE.Mesh(new THREE.PlaneGeometry(30, 9), new THREE.MeshBasicMaterial({
+            map:createTextPanelTexture(['NEXUS GATE','ANA GIRIS'], {bg:'#03050a', fg:'#00ffff', accent:'#ffcc33'}),
+            transparent:true, opacity:0.82, blending:THREE.AdditiveBlending, side:THREE.DoubleSide
+        }));
+        gate.position.set(0, 8, -335); gate.rotation.y = Math.PI; scene.add(gate);
+        cityLife.islandFX.push({ mesh: gate, phase: 0.7 });
+        const unreachableSign = new THREE.Mesh(new THREE.PlaneGeometry(24, 8), new THREE.MeshBasicMaterial({
+            map:createTextPanelTexture(['OFF-LIMITS','ADA-12'], {bg:'#03050a', fg:'#ff6688', accent:'#00ffff'}),
+            transparent:true, opacity:0.78, blending:THREE.AdditiveBlending, side:THREE.DoubleSide
+        }));
+        unreachableSign.position.set(-160, 20, -610); unreachableSign.rotation.y = Math.PI; scene.add(unreachableSign);
+        cityLife.islandFX.push({ mesh: unreachableSign, phase: 1.5 });
+    }
+    createUnreachableIslandAndBridge();
+
     // Kıyı çizgisi (köpük efekti — ince açık şerit)
     const foamMat = new THREE.MeshStandardMaterial({ color: 0xddeeff, roughness: 1.0, metalness: 0.0, transparent: true, opacity: 0.55 });
     const foam = new THREE.Mesh(new THREE.PlaneGeometry(4, 700), foamMat);
@@ -1121,7 +1184,7 @@ window.onload = function() {
     // --- YUMUŞAK SINIR (duvar yok, görünmez bariyer) ---
     // Sınır kontrolü playerMesh hareket kodunda yapılır (checkCollision zaten var)
     // Ek olarak: sınıra yaklaşınca sis yoğunlaşır (playerUpdate'te)
-    const WORLD_BOUND = 310; // oyuncu bu koordinatı geçemez
+    const WORLD_BOUND = 340; // ada rıhtımı dahil; oyuncu bu hattın ötesindeki deniz/ada illüzyonuna geçemez
 
     // Okyanus animasyon referansı (animate loop'ta kullanılır)
     let _oceanTime = 0;
@@ -1206,42 +1269,88 @@ window.onload = function() {
 
     function createMetroSystem() {
         const railMat = new THREE.MeshStandardMaterial({ color:0x191923, metalness:0.7, roughness:0.35 });
-        const lightMat = new THREE.MeshBasicMaterial({ color:new THREE.Color(0,2.4,3), transparent:true, opacity:0.7, blending:THREE.AdditiveBlending });
-        const lineA = new THREE.Group();
-        const deckA = new THREE.Mesh(new THREE.BoxGeometry(5,0.5,610), railMat); deckA.position.set(-245, 10.5, 0); lineA.add(deckA);
-        const glowA = new THREE.Mesh(new THREE.BoxGeometry(0.3,0.15,610), lightMat); glowA.position.set(-245, 10.95, 0); lineA.add(glowA);
-        for(let z=-300; z<=300; z+=36) {
-            const leg = new THREE.Mesh(new THREE.CylinderGeometry(0.25,0.32,11,6), railMat);
-            leg.position.set(-245, 4.4, z); lineA.add(leg);
+        const lightMat = new THREE.MeshBasicMaterial({ color:new THREE.Color(0,2.4,3), transparent:true, opacity:0.72, blending:THREE.AdditiveBlending });
+        const routePts = [
+            new THREE.Vector3(-330, 13.5, -330),
+            new THREE.Vector3(330, 13.5, -330),
+            new THREE.Vector3(330, 13.5, 330),
+            new THREE.Vector3(-330, 13.5, 330),
+        ];
+        const curve = new THREE.CurvePath();
+        curve.add(new THREE.LineCurve3(routePts[0], routePts[1]));
+        curve.add(new THREE.LineCurve3(routePts[1], routePts[2]));
+        curve.add(new THREE.LineCurve3(routePts[2], routePts[3]));
+        curve.add(new THREE.LineCurve3(routePts[3], routePts[0]));
+        cityLife.metroCurve = curve;
+        cityLife.metroLength = curve.getLength();
+
+        const rail = new THREE.Mesh(new THREE.TubeGeometry(curve, 240, 0.42, 6, true), railMat);
+        scene.add(rail);
+        const glowRail = new THREE.Mesh(new THREE.TubeGeometry(curve, 240, 0.16, 6, true), lightMat);
+        glowRail.position.y = 0.18; scene.add(glowRail);
+        for(let i=0; i<42; i++) {
+            const p = curve.getPointAt(i/42);
+            const leg = new THREE.Mesh(new THREE.CylinderGeometry(0.23,0.36,13,6), railMat);
+            leg.position.set(p.x, 5.6, p.z); scene.add(leg);
         }
-        worldGroup.add(lineA);
 
-        const deckB = new THREE.Mesh(new THREE.BoxGeometry(560,0.5,5), railMat); deckB.position.set(10, 15, 242); worldGroup.add(deckB);
-        const glowB = new THREE.Mesh(new THREE.BoxGeometry(560,0.15,0.3), lightMat); glowB.position.set(10, 15.42, 242); worldGroup.add(glowB);
+        function addStation(name, t, color) {
+            const p = curve.getPointAt(t);
+            const ahead = curve.getPointAt((t + 0.01) % 1);
+            const tangent = new THREE.Vector3().subVectors(ahead, p).normalize();
+            const angle = Math.atan2(tangent.x, tangent.z);
+            const platformMat = new THREE.MeshStandardMaterial({ color:0x101620, roughness:0.55, metalness:0.45, emissive:new THREE.Color(color).multiplyScalar(0.06) });
+            const station = new THREE.Group();
+            const platform = new THREE.Mesh(new THREE.BoxGeometry(42, 0.7, 10), platformMat);
+            platform.position.y = 0; station.add(platform);
+            const canopy = new THREE.Mesh(new THREE.BoxGeometry(38, 0.25, 7), new THREE.MeshBasicMaterial({ color:new THREE.Color(color), transparent:true, opacity:0.18, blending:THREE.AdditiveBlending }));
+            canopy.position.y = 5.4; station.add(canopy);
+            const sign = new THREE.Mesh(new THREE.PlaneGeometry(9, 3.2), new THREE.MeshBasicMaterial({
+                map:createTextPanelTexture(['M', name], {bg:'#02050a', fg:'#ffffff', accent: color === 0x00ffff ? '#00ffff' : '#ff66cc'}),
+                transparent:true, opacity:0.86, blending:THREE.AdditiveBlending, side:THREE.DoubleSide
+            }));
+            sign.position.set(0, 4.2, -5.3); station.add(sign);
+            station.position.set(p.x, 13.4, p.z); station.rotation.y = angle; scene.add(station);
 
-        function train(axis, start, color) {
+            const groundMarker = new THREE.Group();
+            const ring = new THREE.Mesh(new THREE.TorusGeometry(2.2, 0.08, 6, 32), new THREE.MeshBasicMaterial({ color:new THREE.Color(color), transparent:true, opacity:0.9, blending:THREE.AdditiveBlending }));
+            ring.rotation.x = Math.PI/2; groundMarker.add(ring);
+            const m = new THREE.Mesh(new THREE.PlaneGeometry(4.8, 4.8), new THREE.MeshBasicMaterial({
+                map:createTextPanelTexture(['M','G ILE BIN'], {bg:'#03060a', fg:'#ffffff', accent: color === 0x00ffff ? '#00ffff' : '#ff66cc'}),
+                transparent:true, opacity:0.82, blending:THREE.AdditiveBlending, side:THREE.DoubleSide, depthWrite:false
+            }));
+            m.position.y = 3.2; groundMarker.add(m);
+            groundMarker.position.set(p.x, 0.1, p.z); scene.add(groundMarker);
+            const data = { name, t, trackPos:p.clone(), groundPos:new THREE.Vector3(p.x, 0.2, p.z), marker:groundMarker, sign, color };
+            cityLife.metroStations.push(data);
+            cityLife.shorelineFX.push({ mesh:ring, phase:Math.random()*6.28, kind:'metroMarker' });
+        }
+        addStation('MERKEZ', 0.125, 0x00ffff);
+        addStation('SAHIL', 0.375, 0xff66cc);
+
+        function train(start, color) {
             const g = new THREE.Group();
             const bodyMat = new THREE.MeshStandardMaterial({ color:0x101018, metalness:0.65, roughness:0.25, emissive:new THREE.Color(color).multiplyScalar(0.12) });
             const winMat = new THREE.MeshBasicMaterial({ color:new THREE.Color(color), transparent:true, opacity:0.9, blending:THREE.AdditiveBlending });
             for(let i=0;i<4;i++) {
                 const car = new THREE.Group();
-                const body = new THREE.Mesh(new THREE.BoxGeometry(axis === 'z' ? 3.5 : 15, 2.2, axis === 'z' ? 15 : 3.5), bodyMat);
+                const body = new THREE.Mesh(new THREE.BoxGeometry(3.7, 2.2, 15), bodyMat);
                 car.add(body);
                 for(let w=-2; w<=2; w++) {
-                    const win = new THREE.Mesh(new THREE.BoxGeometry(axis === 'z' ? 3.7 : 1.6, 0.7, axis === 'z' ? 1.4 : 3.7), winMat);
-                    if(axis === 'z') win.position.set(0,0.35,w*2.5); else win.position.set(w*2.5,0.35,0);
+                    const win = new THREE.Mesh(new THREE.BoxGeometry(3.8, 0.7, 1.4), winMat);
+                    win.position.set(0,0.35,w*2.5);
                     car.add(win);
                 }
-                if(axis === 'z') car.position.z = i * -17; else car.position.x = i * -17;
+                car.position.z = i * -17;
                 g.add(car);
             }
-            g._axis = axis; g._speed = axis === 'z' ? 34 : 27; g._phase = Math.random()*6.28;
-            if(axis === 'z') g.position.set(-245, 12.2, start); else g.position.set(start, 16.6, 242);
+            g._curve = curve; g._u = start; g._speed = 30; g._phase = Math.random()*6.28;
+            const p = curve.getPointAt(start);
+            g.position.copy(p);
             scene.add(g); cityLife.metroTrains.push(g);
         }
-        train('z', -250, 0x00ffff);
-        train('z', 140, 0xff00ff);
-        train('x', -220, 0xff8800);
+        train(0.02, 0x00ffff);
+        train(0.50, 0xff66cc);
     }
 
     createShorelineLife();
@@ -1403,6 +1512,55 @@ window.onload = function() {
     const muzzleMesh = new THREE.Mesh(new THREE.PlaneGeometry(0.4, 0.4), new THREE.MeshBasicMaterial({ color: new THREE.Color(1.5, 1.2, 0), transparent: true, opacity: 0 })); muzzleMesh.position.set(0.4, -0.25, -1.2); gunGroup.add(muzzleMesh);
     camera.add(gunGroup); scene.add(camera);
 
+    const vehicleCockpit = new THREE.Group(); vehicleCockpit.visible = false;
+    const dashMat = new THREE.MeshBasicMaterial({ color:0x05070d, transparent:true, opacity:0.86 });
+    const dashGlowMat = new THREE.MeshBasicMaterial({ color:new THREE.Color(0,1.7,2.2), transparent:true, opacity:0.72, blending:THREE.AdditiveBlending });
+    const dash = new THREE.Mesh(new THREE.BoxGeometry(1.8, 0.16, 0.12), dashMat);
+    dash.position.set(0, -0.58, -1.05); vehicleCockpit.add(dash);
+    const wheel = new THREE.Mesh(new THREE.TorusGeometry(0.22, 0.025, 6, 20), dashGlowMat);
+    wheel.position.set(-0.46, -0.42, -0.92); vehicleCockpit.add(wheel);
+    const wheelHub = new THREE.Mesh(new THREE.CylinderGeometry(0.055,0.055,0.02,8), dashMat);
+    wheelHub.position.copy(wheel.position); wheelHub.rotation.x = Math.PI/2; vehicleCockpit.add(wheelHub);
+    const navPanel = new THREE.Mesh(new THREE.PlaneGeometry(0.45, 0.18), new THREE.MeshBasicMaterial({
+        map:createTextPanelTexture(['NAV','FM 88.8'], {bg:'#010306', fg:'#00ffff', accent:'#ff66cc'}),
+        transparent:true, opacity:0.82, blending:THREE.AdditiveBlending
+    }));
+    navPanel.position.set(0.34, -0.48, -0.90); vehicleCockpit.add(navPanel);
+    for(let i=0; i<4; i++) {
+        const btn = new THREE.Mesh(new THREE.BoxGeometry(0.055,0.035,0.015), dashGlowMat);
+        btn.position.set(0.05 + i*0.08, -0.62, -0.88); vehicleCockpit.add(btn);
+    }
+    const metroWindowOverlay = new THREE.Group(); metroWindowOverlay.visible = false;
+    function makeMetroOverlayMat(color, opacity, additive=false) {
+        return new THREE.MeshBasicMaterial({
+            color, transparent:true, opacity,
+            blending: additive ? THREE.AdditiveBlending : THREE.NormalBlending,
+            depthWrite:false, depthTest:false, side:THREE.DoubleSide
+        });
+    }
+    const frameMat = makeMetroOverlayMat(0x02040a, 0.46);
+    const frameGlow = makeMetroOverlayMat(new THREE.Color(0,1.2,1.6), 0.16, true);
+    const glassMat = makeMetroOverlayMat(new THREE.Color(0.16,0.55,0.7), 0.025, false);
+    const glassPane = new THREE.Mesh(new THREE.PlaneGeometry(1.94, 0.92), glassMat);
+    glassPane.position.set(0, 0.02, -1.18); metroWindowOverlay.add(glassPane);
+    [[-1.03,0,0.035,1.12],[1.03,0,0.035,1.12],[0,0.54,2.06,0.035],[0,-0.56,2.06,0.075]].forEach(([x,y,w,h]) => {
+        const f = new THREE.Mesh(new THREE.PlaneGeometry(w,h), frameMat); f.position.set(x,y,-1.16); metroWindowOverlay.add(f);
+    });
+    [[0,0.46,1.72,0.018],[0,-0.44,1.72,0.018],[-0.52,0.48,0.22,0.018],[0.52,0.48,0.22,0.018]].forEach(([x,y,w,h]) => {
+        const f = new THREE.Mesh(new THREE.PlaneGeometry(w,h), frameGlow); f.position.set(x,y,-1.155); metroWindowOverlay.add(f);
+    });
+    const sill = new THREE.Mesh(new THREE.PlaneGeometry(1.42, 0.16), makeMetroOverlayMat(0x061017, 0.58));
+    sill.position.set(0, -0.49, -1.14); metroWindowOverlay.add(sill);
+    const routeStrip = new THREE.Mesh(new THREE.PlaneGeometry(0.82, 0.018), frameGlow);
+    routeStrip.position.set(0, -0.43, -1.13); metroWindowOverlay.add(routeStrip);
+    [-0.72, 0.72].forEach(x => {
+        const handle = new THREE.Mesh(new THREE.TorusGeometry(0.055, 0.007, 6, 16), frameGlow);
+        handle.position.set(x, 0.39, -1.12); metroWindowOverlay.add(handle);
+    });
+    const metroCabinShell = new THREE.Group(); metroCabinShell.visible = false;
+    const cabinFrameMat = new THREE.MeshBasicMaterial({ color:new THREE.Color(0,0.8,1.2), transparent:true, opacity:0.10, blending:THREE.AdditiveBlending, depthWrite:false });
+    scene.add(vehicleCockpit); camera.add(metroWindowOverlay); scene.add(metroCabinShell);
+
     // =========================================================
     // GOD RAYS — Neon ışık huzmesi sprite'ları
     // =========================================================
@@ -1512,6 +1670,7 @@ window.onload = function() {
         proj.velocity = direction.clone().normalize().multiplyScalar(100); proj.isPlayer = isPlayer; proj.life = 1.0; scene.add(proj); projectiles.push(proj);
         
         if(isPlayer) {
+            if(!GAME.metroRiding) provokeCity(0.2);
             // YENİ: Ay (Moon) Vuruş Kontrolü (Easter Egg)
             const moonRaycaster = new THREE.Raycaster(origin, safeDir);
             const intersects = moonRaycaster.intersectObject(moon);
@@ -2071,14 +2230,15 @@ window.onload = function() {
             if(p.kind === 'sign') p.mesh.material.opacity = 0.62 + Math.sin(now*0.004 + p.phase)*0.18;
         });
         cityLife.metroTrains.forEach(train => {
-            if(train._axis === 'z') {
-                train.position.z += train._speed * dt;
-                if(train.position.z > 340) train.position.z = -340;
-            } else {
-                train.position.x += train._speed * dt;
-                if(train.position.x > 330) train.position.x = -330;
+            if(train._curve) {
+                train._u = (train._u + (train._speed * dt / Math.max(1, cityLife.metroLength))) % 1;
+                const p = train._curve.getPointAt(train._u);
+                const ahead = train._curve.getPointAt((train._u + 0.006) % 1);
+                const dir = new THREE.Vector3().subVectors(ahead, p).normalize();
+                train.position.copy(p);
+                train.position.y += Math.sin(now*0.004 + train._phase) * 0.03;
+                train.rotation.y = Math.atan2(dir.x, dir.z);
             }
-            train.position.y += Math.sin(now*0.004 + train._phase) * 0.002;
         });
         cityLife.airTraffic.forEach(car => {
             car.position.x += car._speed * dt;
@@ -2089,6 +2249,13 @@ window.onload = function() {
             if(item.kind === 'race' && item.mesh.material) item.mesh.material.opacity = 0.55 + Math.sin(now*0.006 + item.phase)*0.2;
             if(item.kind === 'boat') item.mesh.position.y = -0.45 + Math.sin(now*0.0015 + item.phase)*0.12;
             if(item.kind === 'musician') item.mesh.rotation.z = Math.sin(now*0.006)*0.03;
+            if(item.kind === 'metroMarker' && item.mesh.material) item.mesh.material.opacity = 0.62 + Math.sin(now*0.005 + item.phase)*0.28;
+        });
+        cityLife.oceanPieces.forEach((water, i) => {
+            if(water.material) water.material.opacity = 0.68 + Math.sin(now*0.001 + i)*0.04;
+        });
+        cityLife.islandFX.forEach(item => {
+            if(item.mesh.material) item.mesh.material.opacity = 0.55 + Math.sin(now*0.004 + item.phase)*0.22;
         });
         updateBillboardLife(dt, now);
         updateDistrictMood(dt, now);
@@ -2215,6 +2382,7 @@ window.onload = function() {
             banner.style.display='none';cityEventActive=false;
             GAME.score+=ev.interveneReward;if(scoreDisplay) scoreDisplay.innerText=GAME.score.toString().padStart(4,'0');
             showLootMessage(`✓ MÜDAHALE: +${ev.interveneReward} KRD`,"#00ffcc");
+            provokeCity(0.75);
             eventEnemies.forEach(e=>{e.isChaser=true;e.speed=12;});
         };
         document.getElementById('ceb-ignore').onclick=()=>{
@@ -2618,8 +2786,106 @@ window.onload = function() {
     }
     if(objTracker) objTracker.innerText = "SİSTEM HAZIR. BAĞLANTI BEKLENİYOR..."; queueNextContract();
 
+    function isWorldHostile() {
+        return GAME.wantedLevel > 0.05 || GAME.combatProvoked || GAME.datarunChasing;
+    }
+
+    function provokeCity(minWanted = 0.25) {
+        GAME.combatProvoked = true;
+        if(GAME.wantedLevel < minWanted) GAME.wantedLevel = minWanted;
+        updateWantedUI();
+    }
+
+    function getNearestMetroStation(maxDist = 8) {
+        let closest = null, minDist = maxDist;
+        cityLife.metroStations.forEach(st => {
+            const d = playerMesh.position.distanceTo(st.groundPos);
+            if(d < minDist) { minDist = d; closest = st; }
+        });
+        return closest;
+    }
+
+    function getTrainNearStation(station) {
+        let best = null, bestDist = Infinity;
+        cityLife.metroTrains.forEach(train => {
+            const d = train.position.distanceTo(station.trackPos);
+            if(d < bestDist) { bestDist = d; best = train; }
+        });
+        return best || cityLife.metroTrains[0];
+    }
+
+    function boardMetro(station) {
+        const train = getTrainNearStation(station);
+        if(!train) return false;
+        if(train._curve) {
+            train._u = station.t;
+            const p = train._curve.getPointAt(train._u);
+            const ahead = train._curve.getPointAt((train._u + 0.006) % 1);
+            const dir = new THREE.Vector3().subVectors(ahead, p).normalize();
+            train.position.copy(p);
+            train.rotation.y = Math.atan2(dir.x, dir.z);
+        }
+        GAME.metroRiding = true;
+        GAME.metroTrain = train;
+        GAME.metroLastStation = station;
+        GAME.isDriving = false;
+        GAME.currentVehicle = null;
+        GAME.isShooting = false;
+        GAME.metroLookYaw = 0;
+        GAME.metroLookPitch = 0;
+        playerMesh.visible = false;
+        gunGroup.visible = false;
+        metroWindowOverlay.visible = true;
+        metroCabinShell.visible = false;
+        vehicleCockpit.visible = false;
+        if(!GAME.isMobile) document.body.requestPointerLock();
+        showLootMessage(`M-${station.name}: METROYA BİNDİN`, '#00ffff');
+        return true;
+    }
+
+    function exitMetroIfPossible() {
+        if(!GAME.metroRiding || !GAME.metroTrain) return false;
+        let exitStation = null, bestDist = 46;
+        cityLife.metroStations.forEach(st => {
+            const d = GAME.metroTrain.position.distanceTo(st.trackPos);
+            if(d < bestDist) { bestDist = d; exitStation = st; }
+        });
+        if(!exitStation) {
+            showLootMessage('METRO HAREKETTE — DURAKTA İNEBİLİRSİN', '#ffcc00');
+            return true;
+        }
+        GAME.metroRiding = false;
+        GAME.metroTrain = null;
+        GAME.metroLastStation = exitStation;
+        metroWindowOverlay.visible = false;
+        metroCabinShell.visible = false;
+        playerMesh.position.copy(exitStation.groundPos);
+        playerTargetPos.copy(playerMesh.position);
+        playerMesh.visible = GAME.mode === 'RTS';
+        gunGroup.visible = GAME.mode === 'FPS';
+        if(GAME.mode === 'FPS' && !GAME.isMobile) document.body.requestPointerLock();
+        showLootMessage(`M-${exitStation.name}: İNDİN`, '#88ffdd');
+        return true;
+    }
+
+    function updateMetroPassengerCamera(dt, now) {
+        if(!GAME.metroRiding || !GAME.metroTrain) return;
+        const train = GAME.metroTrain;
+        const forward = new THREE.Vector3(0,0,1).applyAxisAngle(new THREE.Vector3(0,1,0), train.rotation.y).normalize();
+        const right = new THREE.Vector3(1,0,0).applyAxisAngle(new THREE.Vector3(0,1,0), train.rotation.y).normalize();
+        const camPos = train.position.clone().add(right.multiplyScalar(1.25)).add(new THREE.Vector3(0, 1.15 + Math.sin(now*0.004)*0.025, 0));
+        camera.position.lerp(camPos, 0.35);
+        camera.rotation.y = train.rotation.y + GAME.metroLookYaw;
+        camera.rotation.x = GAME.metroLookPitch;
+        metroCabinShell.visible = false;
+        playerMesh.position.copy(train.position);
+    }
+
     function doInteract() {
         if(GAME.isPaused) return; const btnInt = document.getElementById('btn-interact'); const mobileOverlay = document.getElementById('mobile-overlay');
+        if(GAME.metroRiding) { exitMetroIfPossible(); return; }
+        const metroStation = !GAME.isDriving ? getNearestMetroStation(8) : null;
+        if(metroStation) { boardMetro(metroStation); return; }
         if(GAME.isDriving) {
             GAME.isDriving = false; GAME.currentVehicle.isPlayerDriven = false; GAME.currentVehicle.isParked = true; GAME.currentVehicle.speed = 0;
             let fl = GAME.currentVehicle.getObjectByName("headlight"); if(fl) fl.material.color = noGlow; let bl = GAME.currentVehicle.getObjectByName("taillight"); if(bl) bl.material.color = noGlow;
@@ -2647,7 +2913,7 @@ window.onload = function() {
 
     const raycaster = new THREE.Raycaster(); const mouse = new THREE.Vector2(); let isPointerLocked = false;
     function doDash() {
-        if(GAME.isDriving) return; 
+        if(GAME.isDriving || GAME.metroRiding) return; 
         if(GAME.dashCooldown <= 0 && !GAME.isPaused) {
             GAME.isDashing = true; GAME.dashTimer = 0.2; GAME.dashCooldown = 2.0; 
             let dashOverlay = document.getElementById('dash-overlay'); if(dashOverlay) { dashOverlay.style.opacity = 1; setTimeout(() => dashOverlay.style.opacity = 0, 200); }
@@ -2671,7 +2937,13 @@ window.onload = function() {
 
     document.addEventListener('pointerlockchange', () => { isPointerLocked = document.pointerLockElement === document.body; });
     document.addEventListener('mousemove', (e) => {
-        if (GAME.mode === 'FPS' && isPointerLocked && !GAME.isPaused) {
+        if ((GAME.mode === 'FPS' || GAME.metroRiding) && isPointerLocked && !GAME.isPaused) {
+            if(GAME.metroRiding) {
+                GAME.metroLookYaw -= (e.movementX || 0) * 0.003;
+                GAME.metroLookPitch -= (e.movementY || 0) * 0.003;
+                GAME.metroLookPitch = Math.max(-Math.PI/2.6, Math.min(Math.PI/2.6, GAME.metroLookPitch));
+                return;
+            }
             if(!GAME.isDriving) { playerMesh.rotation.y -= (e.movementX || 0) * 0.003; camera.rotation.y = playerMesh.rotation.y; } 
             else { camera.rotation.y -= (e.movementX || 0) * 0.003; }
             camera.rotation.x -= (e.movementY || 0) * 0.003; camera.rotation.x = Math.max(-Math.PI/2.2, Math.min(Math.PI/2.2, camera.rotation.x));
@@ -2720,7 +2992,7 @@ window.onload = function() {
     }
 
     function handleRTSInteraction(clientX, clientY, targetElem) {
-        if(GAME.mode !== 'RTS' || GAME.isPaused || GAME.isDriving) return; 
+        if(GAME.mode !== 'RTS' || GAME.isPaused || GAME.isDriving || GAME.metroRiding) return; 
         if(targetElem.closest('#ui-layer') && !targetElem.closest('#game-container')) return;
         mouse.x = (clientX / window.innerWidth) * 2 - 1; mouse.y = -(clientY / window.innerHeight) * 2 + 1; raycaster.setFromCamera(mouse, camera);
         const intersects = raycaster.intersectObjects(floorMeshes);
@@ -2733,7 +3005,11 @@ window.onload = function() {
     }
     
     document.addEventListener('mousedown', (e) => {
-        if (GAME.mode === 'FPS' && !GAME.isMobile && !GAME.isPaused) {
+        if (GAME.metroRiding && !GAME.isMobile && !GAME.isPaused) {
+            if (!isPointerLocked) document.body.requestPointerLock();
+            return;
+        }
+        if (GAME.mode === 'FPS' && !GAME.isMobile && !GAME.isPaused && !GAME.metroRiding) {
             if (!isPointerLocked) {
                 if (e.target.closest('.cyber-btn') || e.target.closest('#contract-modal') || e.target.closest('#msg-notification')) return;
                 document.body.requestPointerLock();
@@ -2745,7 +3021,8 @@ window.onload = function() {
     document.getElementById('game-container').addEventListener('touchstart', (e) => { if(GAME.mode === 'RTS' && e.target.tagName === 'CANVAS') { e.preventDefault(); handleRTSInteraction(e.touches[0].clientX, e.touches[0].clientY, e.target); } }, {passive: false});
 
     function triggerContagion() {
-        if(GAME.isPaused || GAME.isDriving) return; 
+        if(GAME.isPaused || GAME.isDriving || GAME.metroRiding) return; 
+        provokeCity(0.35);
         let hackOverlay = document.getElementById('hack-overlay'); if(hackOverlay) { hackOverlay.style.opacity = 1; setTimeout(() => hackOverlay.style.opacity = 0, 200); }
         let target = null, minDist = Infinity;
         if(GAME.mode === 'FPS') { raycaster.setFromCamera(new THREE.Vector2(0,0), camera); const intersects = raycaster.intersectObjects(enemies); if(intersects.length > 0) target = intersects[0].object; } 
@@ -2757,7 +3034,7 @@ window.onload = function() {
     let btnHack = document.getElementById('btn-hack'); if(btnHack) btnHack.addEventListener('click', triggerContagion);
 
     function toggleMode() {
-        if(GAME.isPaused) return; GAME.isShooting = false; 
+        if(GAME.isPaused || GAME.metroRiding) return; GAME.isShooting = false; 
         let rtsInfo = document.getElementById('rts-info'); let crosshair = document.getElementById('crosshair'); let btnMode = document.getElementById('btn-mode');
         
         if (GAME.mode === 'RTS') {
@@ -2796,6 +3073,7 @@ window.onload = function() {
     }
 
     function onEnemyKilled(pos) {
+        GAME.combatProvoked = true;
         GAME.score += 100; GAME.wantedLevel = Math.min(5, GAME.wantedLevel + 0.15); 
         if(scoreDisplay) scoreDisplay.innerText = GAME.score.toString().padStart(4, '0');
         if(GAME.contractIndex >= 0 && GAME.contractIndex < CONTRACTS.length) { let c = CONTRACTS[GAME.contractIndex]; if(GAME.currentKills < c.target) { GAME.currentKills++; updateTracker(); } }
@@ -2803,6 +3081,7 @@ window.onload = function() {
     }
 
     function onCivilianKilled() {
+        GAME.combatProvoked = true;
         GAME.score = Math.max(0, GAME.score - 50); GAME.wantedLevel = Math.min(5, GAME.wantedLevel + 1.0); 
         if(scoreDisplay) scoreDisplay.innerText = GAME.score.toString().padStart(4, '0');
         let msg = document.getElementById('penalty-msg'); if(msg) { msg.style.opacity = 1; setTimeout(() => msg.style.opacity = 0, 1500); }
@@ -2849,9 +3128,18 @@ window.onload = function() {
             // --- UPGRADE BUTON GÖRÜNÜRLÜKİ (araçtayken göster) ---
             let upgBtn = document.getElementById('upgrade-btn');
             if(upgBtn) upgBtn.style.display = GAME.isDriving ? 'block' : 'none';
-            if(!GAME.isDriving) {
+            if(GAME.metroRiding) {
+                let btnInt = document.getElementById('btn-interact');
+                if(btnInt) { btnInt.innerText = "METRODAN İN [G]"; btnInt.style.display = 'block'; }
+            } else if(!GAME.isDriving) {
                 let canEnter = false; for(let car of vehicles) { if(playerMesh.position.distanceTo(car.position) < 8) { canEnter = true; break; } }
-                let btnInt = document.getElementById('btn-interact'); if(btnInt) { if(canEnter) btnInt.style.display = 'block'; else btnInt.style.display = 'none'; }
+                const metroStation = getNearestMetroStation(8);
+                let btnInt = document.getElementById('btn-interact');
+                if(btnInt) {
+                    if(metroStation) { btnInt.innerText = "METROYA BİN [G]"; btnInt.style.display = 'block'; }
+                    else if(canEnter) { btnInt.innerText = "ARACA BİN [G]"; btnInt.style.display = 'block'; }
+                    else btnInt.style.display = 'none';
+                }
             }
 
             const gameDt = dt * GAME.timeScale; 
@@ -2859,7 +3147,13 @@ window.onload = function() {
             for(let h of holograms) { h.rotation.y += gameDt; h.material.opacity = 0.5 + Math.sin(now*0.005)*0.3; }
             updateCityLife(gameDt, now);
 
-            if(GAME.isDriving && GAME.currentVehicle) {
+            vehicleCockpit.visible = GAME.isDriving && GAME.mode === 'FPS';
+            metroWindowOverlay.visible = GAME.metroRiding;
+            metroCabinShell.visible = false;
+
+            if(GAME.metroRiding) {
+                updateMetroPassengerCamera(gameDt, now);
+            } else if(GAME.isDriving && GAME.currentVehicle) {
                 let cv = GAME.currentVehicle; let inputY = 0; let inputX = 0;
                 if(!GAME.isMobile) { if(GAME.keys.w) inputY = 1; if(GAME.keys.s) inputY = -1; if(GAME.keys.a) inputX = 1; if(GAME.keys.d) inputX = -1; } 
                 else { inputY = -GAME.moveJoy.y; inputX = -GAME.moveJoy.x; }
@@ -2885,9 +3179,14 @@ window.onload = function() {
                 }
                 playerMesh.position.copy(cv.position); playerMesh.rotation.y = cv.rotation.y;
 
-                if(GAME.mode === 'FPS') { camera.position.copy(cv.position); camera.position.y += 1.0; } 
+                if(GAME.mode === 'FPS') {
+                    const cabOffset = new THREE.Vector3(0, 1.82, -1.15).applyAxisAngle(new THREE.Vector3(0,1,0), cv.rotation.y);
+                    camera.position.copy(cv.position).add(cabOffset);
+                    vehicleCockpit.position.copy(cv.position).add(cabOffset);
+                    vehicleCockpit.rotation.set(0, cv.rotation.y, 0);
+                } 
                 else { let camTarget = new THREE.Vector3(cv.position.x, 60, cv.position.z + 40); camera.position.lerp(camTarget, 0.1); camera.lookAt(cv.position);
-                    if(enemies.length > 0 && Math.random() < 0.08 * GAME.timeScale) {
+                    if(isWorldHostile() && enemies.length > 0 && Math.random() < 0.08 * GAME.timeScale) {
                         let closest = null, minDist = Infinity; for(let i=0; i<enemies.length; i++) { let d = cv.position.distanceTo(enemies[i].position); if(d < 40 && d < minDist) { minDist = d; closest = enemies[i]; } }
                         if(closest) { let origin = cv.position.clone().add(new THREE.Vector3(0,1.5,0)); let aimDir = new THREE.Vector3().subVectors(closest.position, origin).normalize(); shoot(origin, aimDir, true); }
                     }
@@ -2895,7 +3194,7 @@ window.onload = function() {
                 if(GAME.mode === 'FPS' && GAME.isShooting && (now - GAME.lastShot > 150)) { let shootDir = new THREE.Vector3(0, 0, -1).applyQuaternion(camera.quaternion); shoot(cv.position.clone().add(new THREE.Vector3(0,1.5,0)), shootDir, true); GAME.lastShot = now; }
 
                 // TARET: Araçtayken en yakın düşmana otomatik ateş
-                if(UPGRADES.turret && Math.random() < 0.06 * GAME.timeScale) {
+                if(isWorldHostile() && UPGRADES.turret && Math.random() < 0.06 * GAME.timeScale) {
                     let closest=null,minDist=Infinity;
                     for(let i=0;i<enemies.length;i++){let d=cv.position.distanceTo(enemies[i].position);if(d<35&&d<minDist){minDist=d;closest=enemies[i];}}
                     if(closest){let aimDir=new THREE.Vector3().subVectors(closest.position.clone().add(new THREE.Vector3(0,1,0)),cv.position.clone().add(new THREE.Vector3(0,1.5,0))).normalize();shoot(cv.position.clone().add(new THREE.Vector3(0,1.5,0)),aimDir,true);}
@@ -2903,7 +3202,7 @@ window.onload = function() {
             } else {
                 let currentSpeed = playerSpeed; if(GAME.dashCooldown > 0) GAME.dashCooldown -= dt; if(GAME.isDashing) { GAME.dashTimer -= dt; if(GAME.dashTimer <= 0) GAME.isDashing = false; else currentSpeed = playerSpeed * 4.0; }
                 const speed = currentSpeed * dt; const oldPos = playerMesh.position.clone();
-                if(GAME.wantedLevel > 0) { GAME.wantedLevel -= (dt * 0.05); if(GAME.wantedLevel < 0) GAME.wantedLevel = 0; updateWantedUI(); }
+                if(GAME.wantedLevel > 0) { GAME.wantedLevel -= (dt * 0.05); if(GAME.wantedLevel < 0.05) { GAME.wantedLevel = 0; GAME.combatProvoked = false; } updateWantedUI(); }
                 for(let i = visualBeams.length - 1; i >= 0; i--) { visualBeams[i].life -= dt; if(visualBeams[i].life <= 0) { scene.remove(visualBeams[i].mesh); visualBeams.splice(i, 1); } }
                 if(gunGroup.position.z > 0) { gunGroup.position.z -= dt * 2.0; if(gunGroup.position.z < 0) gunGroup.position.z = 0; }
                 if(GAME.mode === 'FPS' && GAME.isShooting && (now - GAME.lastShot > 150)) { let dir = new THREE.Vector3(0, 0, -1).applyQuaternion(camera.quaternion); shoot(camera.position.clone(), dir, true); GAME.lastShot = now; }
@@ -2913,7 +3212,7 @@ window.onload = function() {
                     // Yumuşak sınır: RTS'te hedef noktayı sınırla
                     playerTargetPos.x = Math.max(-WORLD_BOUND, Math.min(WORLD_BOUND+120, playerTargetPos.x));
                     playerTargetPos.z = Math.max(-WORLD_BOUND, Math.min(WORLD_BOUND, playerTargetPos.z));
-                    if(enemies.length > 0 && Math.random() < 0.08 * GAME.timeScale) {
+                    if(isWorldHostile() && enemies.length > 0 && Math.random() < 0.08 * GAME.timeScale) {
                         let closest = null, minDist = Infinity; for(let i=0; i<enemies.length; i++) { let d = playerMesh.position.distanceTo(enemies[i].position); if(d < 40 && d < minDist) { minDist = d; closest = enemies[i]; } }
                         if(closest) {
                             let origin = playerMesh.position.clone().add(new THREE.Vector3(0, 1.2, 0));
@@ -3112,6 +3411,23 @@ window.onload = function() {
                 }
 
                 _vDir.subVectors(playerMesh.position, e.position); _vDir.y = 0; let dist = playerMesh.position.distanceTo(e.position);
+
+                if(!isWorldHostile() && !e.isChaser && !e._hacked && !e._alarmTarget) {
+                    if (e.isVert) { e.position.z += e.direction * e.speed * gameDt; if (e.position.z > 280 || e.position.z < -280) e.direction *= -1; }
+                    else { e.position.x += e.direction * e.speed * gameDt; if (e.position.x > 280 || e.position.x < -280) e.direction *= -1; }
+                    e.rotation.y = e.isVert ? (e.direction === 1 ? 0 : Math.PI) : (e.direction === 1 ? Math.PI/2 : -Math.PI/2);
+                    e.position.y = 0 + Math.sin(now * 0.003 + e.position.x) * 0.12;
+                    if(e._legL) {
+                        const phase = now * 0.004 + e._animPhase;
+                        const legSwing = Math.sin(phase) * 0.34;
+                        e._legL.rotation.x = legSwing;  e._legL._knee.rotation.x = Math.max(0, -legSwing * 0.45);
+                        e._legR.rotation.x = -legSwing; e._legR._knee.rotation.x = Math.max(0, legSwing * 0.45);
+                        e._armL.rotation.x = -legSwing * 0.35;
+                        e._armR.rotation.x =  legSwing * 0.35;
+                        if(e._headGroup) e._headGroup.rotation.y = Math.sin(phase * 0.4) * 0.05;
+                    }
+                    continue;
+                }
 
                 // --- TAKTİKSEL AI STATE MACHINE ---
                 // Hacklenen düşman: oyuncu için savaşır
