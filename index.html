@@ -459,130 +459,520 @@
     </div>
 
 <script>
-// --- SES MOTORU ---
+// ============================================================
+// SES MOTORU v2 — Katmanlı Siber Şehir Audio Sistemi
+// ============================================================
 let bgmInitialized = false; let audioCtxSFX = null;
+let _masterGain = null, _musicGain = null, _ambienceGain = null, _sfxGain = null;
+let _currentZoneSrc = null; let _currentZone = '';
+let _hackSidechainActive = false;
+let _chaseLayerSrc = null, _chaseLayerGain = null;
+let _ambienceSrc = null;
+let _rainNode = null; let _rainGain = null;
+let _npcLineClock = 0;
+let _zoneCheckClock = 0;
+let _wantedMusicActive = false;
+
 async function createAndPlayBGM() {
     if(bgmInitialized) return; bgmInitialized = true;
-    const audioCtx = new (window.AudioContext || window.webkitAudioContext)(); audioCtxSFX = audioCtx; if (audioCtx.state === 'suspended') await audioCtx.resume();
-    const bpm = 105; const beatLen = 60 / bpm; const loopDuration = beatLen * 32; 
-    const offCtx = new OfflineAudioContext(2, audioCtx.sampleRate * loopDuration, audioCtx.sampleRate);
-    
-    for(let i=0; i<32; i++) {
-        let t = i * beatLen; let osc = offCtx.createOscillator(); let gain = offCtx.createGain();
-        osc.frequency.setValueAtTime(100, t); osc.frequency.exponentialRampToValueAtTime(0.01, t + 0.4);
-        gain.gain.setValueAtTime(0.9, t); gain.gain.exponentialRampToValueAtTime(0.01, t + 0.4);
-        osc.connect(gain); gain.connect(offCtx.destination); osc.start(t); osc.stop(t+0.4);
+    const ctx = new (window.AudioContext || window.webkitAudioContext)();
+    audioCtxSFX = ctx;
+    if(ctx.state === 'suspended') await ctx.resume();
+
+    // Gain hiyerarşisi
+    _masterGain = ctx.createGain(); _masterGain.gain.value = 0.85; _masterGain.connect(ctx.destination);
+    _musicGain   = ctx.createGain(); _musicGain.gain.value   = 0.0;  _musicGain.connect(_masterGain);
+    _ambienceGain= ctx.createGain(); _ambienceGain.gain.value= 0.0;  _ambienceGain.connect(_masterGain);
+    _sfxGain     = ctx.createGain(); _sfxGain.gain.value     = 1.0;  _sfxGain.connect(_masterGain);
+
+    // Fade-in
+    _musicGain.gain.setTargetAtTime(0.65, ctx.currentTime + 0.5, 2.0);
+    _ambienceGain.gain.setTargetAtTime(0.5, ctx.currentTime + 1.0, 2.5);
+
+    playZoneBGM('street');
+    startCityAmbience();
+}
+
+// --- BÖLGESEL MÜZİK ---
+function _buildBassline(offCtx, notes, bpm, bars=32, distAmt=1.5, lpFreq=700) {
+    const beatLen = 60/bpm;
+    for(let i=0;i<bars*4;i++){
+        const t=i*(beatLen/4); const note=notes[Math.floor(i/(bars))]||notes[0];
+        const osc=offCtx.createOscillator(); osc.type='sawtooth'; osc.frequency.value=note;
+        const dist=offCtx.createWaveShaper();
+        const cv=new Float32Array(256); for(let k=0;k<256;k++){const x=k*2/256-1;cv[k]=Math.tanh(x*distAmt);} dist.curve=cv;
+        const f=offCtx.createBiquadFilter(); f.type='lowpass'; f.frequency.value=lpFreq;
+        const g=offCtx.createGain(); g.gain.setValueAtTime((i%4===0)?0.3:0.5,t); g.gain.exponentialRampToValueAtTime(0.01,t+beatLen/4);
+        osc.connect(dist); dist.connect(f); f.connect(g); g.connect(offCtx.destination); osc.start(t); osc.stop(t+beatLen/4);
     }
-    let bassNotes = [32.70, 32.70, 36.71, 27.50]; 
-    for(let i=0; i<128; i++) { 
-        let t = i*(beatLen/4); let note = bassNotes[Math.floor(i/32)]; 
-        let osc = offCtx.createOscillator(); osc.type = 'sawtooth'; osc.frequency.value = note;
-        let filter = offCtx.createBiquadFilter(); filter.type = 'lowpass'; filter.frequency.setValueAtTime(100, t); filter.frequency.linearRampToValueAtTime(800, t+0.05); filter.frequency.linearRampToValueAtTime(100, t+0.2);
-        let gain = offCtx.createGain(); gain.gain.setValueAtTime((i%4===0)?0.3:0.6, t); gain.gain.exponentialRampToValueAtTime(0.01, t+(beatLen/4));
-        osc.connect(filter); filter.connect(gain); gain.connect(offCtx.destination); osc.start(t); osc.stop(t+(beatLen/4));
+}
+function _buildKick(offCtx, bpm, bars=32, gain=0.8, startFreq=140, pattern=[0]) {
+    const beatLen=60/bpm;
+    for(let i=0;i<bars;i++){
+        const beat=i%4;
+        if(pattern.includes(beat)){
+            const t=i*beatLen;
+            const osc=offCtx.createOscillator(); osc.frequency.setValueAtTime(startFreq,t); osc.frequency.exponentialRampToValueAtTime(0.01,t+0.28);
+            const g=offCtx.createGain(); g.gain.setValueAtTime(gain,t); g.gain.exponentialRampToValueAtTime(0.001,t+0.3);
+            osc.connect(g); g.connect(offCtx.destination); osc.start(t); osc.stop(t+0.32);
+        }
+        // Snare on 2&4
+        if(beat===2){
+            const t=i*beatLen; const buf=offCtx.createBuffer(1,offCtx.sampleRate*0.15,offCtx.sampleRate);
+            const bd=buf.getChannelData(0); for(let k=0;k<bd.length;k++) bd[k]=(Math.random()*2-1)*Math.exp(-k/bd.length*9);
+            const src=offCtx.createBufferSource(); src.buffer=buf;
+            const sf=offCtx.createBiquadFilter(); sf.type='bandpass'; sf.frequency.value=2400; sf.Q.value=0.8;
+            const sg=offCtx.createGain(); sg.gain.setValueAtTime(0.18,t); sg.gain.exponentialRampToValueAtTime(0.001,t+0.15);
+            src.connect(sf); sf.connect(sg); sg.connect(offCtx.destination); src.start(t); src.stop(t+0.17);
+        }
     }
-    let padNotes = [ [130.81, 155.56, 196.00], [130.81, 155.56, 196.00], [146.83, 174.61, 220.00], [110.00, 130.81, 164.81] ];
-    for(let i=0; i<4; i++) {
-        let t = i*(beatLen*8); let chord = padNotes[i];
-        chord.forEach(freq => {
-            for(let j=0; j<3; j++) { 
-                let osc = offCtx.createOscillator(); osc.type = 'sawtooth'; osc.frequency.value = freq * (1 + (j-1)*0.005);
-                let gain = offCtx.createGain(); gain.gain.setValueAtTime(0, t); gain.gain.linearRampToValueAtTime(0.08, t + 2); gain.gain.setValueAtTime(0.08, t + (beatLen*8) - 2); gain.gain.linearRampToValueAtTime(0, t + (beatLen*8)); 
-                let filter = offCtx.createBiquadFilter(); filter.type = 'lowpass'; filter.frequency.value = 600;
-                osc.connect(filter); filter.connect(gain); gain.connect(offCtx.destination); osc.start(t); osc.stop(t+(beatLen*8));
+}
+
+async function makeZoneBGM(zone) {
+    const ctx = audioCtxSFX; if(!ctx) return null;
+    const configs = {
+        street:     {bpm:105, bars:32},
+        slum:       {bpm:88,  bars:32},
+        plaza:      {bpm:100, bars:32},
+        industrial: {bpm:132, bars:32},
+    };
+    const cfg = configs[zone] || configs.street;
+    const {bpm, bars} = cfg;
+    const beatLen = 60/bpm;
+    const loopDur = beatLen*bars;
+    const offCtx = new OfflineAudioContext(2, Math.ceil(ctx.sampleRate*loopDur), ctx.sampleRate);
+
+    if(zone === 'street') {
+        // Synthwave: bass + kick + pad
+        _buildBassline(offCtx,[32.70,36.71,27.50,32.70],bpm,bars,2.0,650);
+        _buildKick(offCtx,bpm,bars,0.75,140,[0,2]);
+        // Lead pad
+        [[130.81,0],[164.81,0.003],[196.00,-0.003]].forEach(([f,det])=>{
+            for(let i=0;i<4;i++){
+                const t=i*beatLen*8;
+                const osc=offCtx.createOscillator(); osc.type='sawtooth'; osc.frequency.value=f*(1+det);
+                const flt=offCtx.createBiquadFilter(); flt.type='lowpass'; flt.frequency.value=700;
+                const g=offCtx.createGain(); g.gain.setValueAtTime(0,t); g.gain.linearRampToValueAtTime(0.06,t+1.5); g.gain.linearRampToValueAtTime(0,t+beatLen*8);
+                osc.connect(flt); flt.connect(g); g.connect(offCtx.destination); osc.start(t); osc.stop(t+beatLen*8);
             }
         });
+    } else if(zone === 'slum') {
+        // Distorted lo-fi
+        _buildBassline(offCtx,[36.71,32.70,36.71,30.87],bpm,bars,5.0,400);
+        _buildKick(offCtx,bpm,bars,0.9,100,[0]);
+        // Lofi grain
+        for(let i=0;i<bars*4;i++){
+            if(Math.random()>0.7){
+                const t=i*(beatLen/4);
+                const buf=offCtx.createBuffer(1,offCtx.sampleRate*0.03,offCtx.sampleRate);
+                const bd=buf.getChannelData(0); for(let k=0;k<bd.length;k++) bd[k]=(Math.random()*2-1)*0.4;
+                const src=offCtx.createBufferSource(); src.buffer=buf;
+                const g=offCtx.createGain(); g.gain.value=0.04;
+                src.connect(g); g.connect(offCtx.destination); src.start(t); src.stop(t+0.04);
+            }
+        }
+        // Muffled chord
+        [110,130.81,155.56].forEach(f=>{
+            const osc=offCtx.createOscillator(); osc.type='triangle'; osc.frequency.value=f;
+            const flt=offCtx.createBiquadFilter(); flt.type='lowpass'; flt.frequency.value=350;
+            const g=offCtx.createGain(); g.gain.value=0.035;
+            osc.connect(flt); flt.connect(g); g.connect(offCtx.destination); osc.start(0); osc.stop(loopDur);
+        });
+    } else if(zone === 'plaza') {
+        // Clean synthwave — bright & polished
+        _buildBassline(offCtx,[65.41,73.42,55.0,65.41],bpm,bars,1.0,1400);
+        _buildKick(offCtx,bpm,bars,0.6,200,[0,2]);
+        // Arpeggio lead
+        const arpNotes=[523.25,659.26,783.99,880.00,783.99,659.26,523.25,440.00];
+        for(let i=0;i<bars*2;i++){
+            const t=i*(beatLen/2); const note=arpNotes[i%arpNotes.length];
+            const osc=offCtx.createOscillator(); osc.type='square'; osc.frequency.value=note;
+            const flt=offCtx.createBiquadFilter(); flt.type='lowpass'; flt.frequency.value=4000;
+            const g=offCtx.createGain(); g.gain.setValueAtTime(0,t); g.gain.linearRampToValueAtTime(0.035,t+0.02); g.gain.exponentialRampToValueAtTime(0.001,t+beatLen*0.45);
+            osc.connect(flt); flt.connect(g); g.connect(offCtx.destination); osc.start(t); osc.stop(t+beatLen*0.5);
+        }
+        // Reverb shimmer pad
+        [261.63,329.63,392.0].forEach((f,pi)=>{
+            const osc=offCtx.createOscillator(); osc.type='sine'; osc.frequency.value=f*(1+pi*0.002);
+            const g=offCtx.createGain(); g.gain.value=0.05;
+            osc.connect(g); g.connect(offCtx.destination); osc.start(0); osc.stop(loopDur);
+        });
+    } else { // industrial — dark techno
+        _buildBassline(offCtx,[27.5,29.14,32.7,27.5],bpm,bars,6.0,200);
+        _buildKick(offCtx,bpm,bars,1.0,80,[0,1,2,3]);
+        // Hi-hat every half beat
+        for(let i=0;i<bars*2;i++){
+            const t=i*(beatLen/2);
+            const buf=offCtx.createBuffer(1,offCtx.sampleRate*0.04,offCtx.sampleRate);
+            const bd=buf.getChannelData(0); for(let k=0;k<bd.length;k++) bd[k]=(Math.random()*2-1)*Math.exp(-k/bd.length*18);
+            const src=offCtx.createBufferSource(); src.buffer=buf;
+            const hf=offCtx.createBiquadFilter(); hf.type='highpass'; hf.frequency.value=9000;
+            const hg=offCtx.createGain(); hg.gain.value=i%2===0?0.14:0.06;
+            src.connect(hf); hf.connect(hg); hg.connect(offCtx.destination); src.start(t); src.stop(t+0.05);
+        }
+        // Metal clang hits
+        for(let i=0;i<6;i++){
+            const t=i*(beatLen*4)+beatLen*1.5;
+            const osc=offCtx.createOscillator(); osc.type='square'; osc.frequency.value=700+Math.random()*500;
+            const g=offCtx.createGain(); g.gain.setValueAtTime(0.07,t); g.gain.exponentialRampToValueAtTime(0.001,t+1.2);
+            const f=offCtx.createBiquadFilter(); f.type='bandpass'; f.frequency.value=3200; f.Q.value=2.5;
+            osc.connect(f); f.connect(g); g.connect(offCtx.destination); osc.start(t); osc.stop(t+1.3);
+        }
     }
-    const buffer = await offCtx.startRendering(); const source = audioCtx.createBufferSource();
-    source.buffer = buffer; source.loop = true; source.connect(audioCtx.destination); source.start();
+    return offCtx.startRendering();
 }
 
+async function playZoneBGM(zone) {
+    const ctx = audioCtxSFX; if(!ctx || !_musicGain) return;
+    if(_currentZone === zone && _currentZoneSrc) return;
+    _currentZone = zone;
+    // Fade out old
+    if(_currentZoneSrc) {
+        const old = _currentZoneSrc; _currentZoneSrc = null;
+        _musicGain.gain.setTargetAtTime(0, ctx.currentTime, 0.6);
+        setTimeout(()=>{ try{old.stop();}catch(e){} }, 800);
+    }
+    try {
+        const buffer = await makeZoneBGM(zone);
+        if(!buffer || _currentZone !== zone) return;
+        const src = ctx.createBufferSource();
+        src.buffer = buffer; src.loop = true;
+        src.connect(_musicGain);
+        _currentZoneSrc = src;
+        _musicGain.gain.setTargetAtTime(_hackSidechainActive ? 0.08 : 0.65, ctx.currentTime, 1.0);
+        src.start();
+    } catch(e) {}
+}
+
+function getZoneFromPos(pos) {
+    if(pos.z > 110) return 'industrial';
+    if(pos.z < -110) return 'plaza';
+    if(Math.abs(pos.x) > 200 && Math.abs(pos.z) > 200) return 'slum';
+    return 'street';
+}
+
+// --- ŞEHİR AMBİYANS DÖNGÜSÜ ---
+async function startCityAmbience() {
+    const ctx = audioCtxSFX; if(!ctx || !_ambienceGain) return;
+    const loopDur = 48.0;
+    const offCtx = new OfflineAudioContext(2, Math.ceil(ctx.sampleRate*loopDur), ctx.sampleRate);
+
+    // Elektrik trafosu 60Hz hum
+    const hum=offCtx.createOscillator(); hum.type='square'; hum.frequency.value=60;
+    const humF=offCtx.createBiquadFilter(); humF.type='lowpass'; humF.frequency.value=130;
+    const humG=offCtx.createGain(); humG.gain.value=0.038;
+    hum.connect(humF); humF.connect(humG); humG.connect(offCtx.destination); hum.start(0); hum.stop(loopDur);
+
+    // Drone vızıltısı (LFO modüle)
+    const dr=offCtx.createOscillator(); dr.type='sawtooth'; dr.frequency.value=82;
+    const lfo=offCtx.createOscillator(); lfo.frequency.value=0.11;
+    const lfoG=offCtx.createGain(); lfoG.gain.value=9;
+    lfo.connect(lfoG); lfoG.connect(dr.frequency);
+    const drF=offCtx.createBiquadFilter(); drF.type='lowpass'; drF.frequency.value=180;
+    const drG=offCtx.createGain(); drG.gain.value=0.055;
+    dr.connect(drF); drF.connect(drG); drG.connect(offCtx.destination);
+    dr.start(0); lfo.start(0); dr.stop(loopDur); lfo.stop(loopDur);
+
+    // Uzak bass darbesi (8 saniyede bir)
+    for(let i=0;i<6;i++){
+        const t=i*8.0+2.0;
+        const osc=offCtx.createOscillator(); osc.type='sine'; osc.frequency.setValueAtTime(40,t); osc.frequency.linearRampToValueAtTime(30,t+0.7);
+        const g=offCtx.createGain(); g.gain.setValueAtTime(0.14,t); g.gain.exponentialRampToValueAtTime(0.001,t+0.9);
+        osc.connect(g); g.connect(offCtx.destination); osc.start(t); osc.stop(t+1.0);
+    }
+
+    // Metro geçiş sesi (2 kez)
+    [11.5, 34.0].forEach(t=>{
+        const buf=offCtx.createBuffer(1,Math.ceil(offCtx.sampleRate*3),offCtx.sampleRate);
+        const bd=buf.getChannelData(0);
+        for(let k=0;k<bd.length;k++){
+            const env=Math.exp(-((k/offCtx.sampleRate-1.1)**2)*2.5);
+            bd[k]=(Math.random()*2-1)*env*0.55;
+        }
+        const src=offCtx.createBufferSource(); src.buffer=buf;
+        const f=offCtx.createBiquadFilter(); f.type='bandpass'; f.frequency.value=580; f.Q.value=0.6;
+        const g=offCtx.createGain(); g.gain.setValueAtTime(0.18,t); g.gain.exponentialRampToValueAtTime(0.001,t+3.0);
+        src.connect(f); f.connect(g); g.connect(offCtx.destination); src.start(t); src.stop(t+3.1);
+    });
+
+    // Uzak siren (sweep)
+    [6.0, 25.0, 42.0].forEach(t=>{
+        const osc=offCtx.createOscillator(); osc.type='sine';
+        osc.frequency.setValueAtTime(580,t); osc.frequency.linearRampToValueAtTime(920,t+0.55); osc.frequency.linearRampToValueAtTime(580,t+1.1);
+        const g=offCtx.createGain(); g.gain.setValueAtTime(0,t); g.gain.linearRampToValueAtTime(0.03,t+0.1); g.gain.linearRampToValueAtTime(0,t+1.15);
+        osc.connect(g); g.connect(offCtx.destination); osc.start(t); osc.stop(t+1.2);
+    });
+
+    const buffer = await offCtx.startRendering();
+    if(!_ambienceGain) return;
+    const src2=ctx.createBufferSource(); src2.buffer=buffer; src2.loop=true;
+    src2.connect(_ambienceGain); _ambienceSrc=src2; src2.start();
+}
+
+// --- SİLAH SESİ — KATMANLI ---
 function playShootSFX() {
-    if(!audioCtxSFX) return; const ctx = audioCtxSFX; if(ctx.state === 'suspended') ctx.resume();
-    const time = ctx.currentTime; const osc = ctx.createOscillator(); osc.type = 'square'; osc.frequency.setValueAtTime(400, time); osc.frequency.exponentialRampToValueAtTime(100, time + 0.1);
-    const oscGain = ctx.createGain(); oscGain.gain.setValueAtTime(0.05, time); oscGain.gain.exponentialRampToValueAtTime(0.01, time + 0.1);
-    let filter = ctx.createBiquadFilter(); filter.type = 'highpass'; filter.frequency.value = 1000;
-    osc.connect(filter); filter.connect(oscGain); oscGain.connect(ctx.destination); osc.start(time); osc.stop(time + 0.1);
-}
-function playLootSFX() {
-    if(!audioCtxSFX) return; const ctx = audioCtxSFX; if(ctx.state === 'suspended') ctx.resume();
-    const time = ctx.currentTime; const osc = ctx.createOscillator(); osc.type = 'sine'; osc.frequency.setValueAtTime(800, time); osc.frequency.linearRampToValueAtTime(1600, time + 0.15);
-    const oscGain = ctx.createGain(); oscGain.gain.setValueAtTime(0.1, time); oscGain.gain.linearRampToValueAtTime(0.01, time + 0.15);
-    osc.connect(oscGain); oscGain.connect(ctx.destination); osc.start(time); osc.stop(time + 0.15);
+    if(!audioCtxSFX) return; const ctx=audioCtxSFX; if(ctx.state==='suspended') ctx.resume();
+    const t=ctx.currentTime; const out=_sfxGain||ctx.destination;
+
+    // Ana mermi burst
+    const osc1=ctx.createOscillator(); osc1.type='square';
+    osc1.frequency.setValueAtTime(380,t); osc1.frequency.exponentialRampToValueAtTime(90,t+0.09);
+    const g1=ctx.createGain(); g1.gain.setValueAtTime(0.07,t); g1.gain.exponentialRampToValueAtTime(0.001,t+0.1);
+    const f1=ctx.createBiquadFilter(); f1.type='highpass'; f1.frequency.value=900;
+    osc1.connect(f1); f1.connect(g1); g1.connect(out); osc1.start(t); osc1.stop(t+0.11);
+
+    // Elektrik snap
+    const snapBuf=ctx.createBuffer(1,Math.ceil(ctx.sampleRate*0.04),ctx.sampleRate);
+    const sd=snapBuf.getChannelData(0); for(let k=0;k<sd.length;k++) sd[k]=(Math.random()*2-1)*Math.exp(-k/sd.length*28);
+    const snap=ctx.createBufferSource(); snap.buffer=snapBuf;
+    const snapF=ctx.createBiquadFilter(); snapF.type='bandpass'; snapF.frequency.value=4200; snapF.Q.value=0.6;
+    const snapG=ctx.createGain(); snapG.gain.setValueAtTime(0.14,t);
+    snap.connect(snapF); snapF.connect(snapG); snapG.connect(out); snap.start(t); snap.stop(t+0.05);
+
+    // Sub-bass kick
+    const osc3=ctx.createOscillator(); osc3.type='sine';
+    osc3.frequency.setValueAtTime(105,t); osc3.frequency.exponentialRampToValueAtTime(18,t+0.14);
+    const g3=ctx.createGain(); g3.gain.setValueAtTime(0.28,t); g3.gain.exponentialRampToValueAtTime(0.001,t+0.15);
+    osc3.connect(g3); g3.connect(out); osc3.start(t); osc3.stop(t+0.16);
+
+    // Metal yankı
+    const osc4=ctx.createOscillator(); osc4.type='sawtooth';
+    osc4.frequency.setValueAtTime(210,t+0.05); osc4.frequency.exponentialRampToValueAtTime(50,t+0.24);
+    const g4=ctx.createGain(); g4.gain.setValueAtTime(0.028,t+0.05); g4.gain.exponentialRampToValueAtTime(0.001,t+0.28);
+    const f4=ctx.createBiquadFilter(); f4.type='bandpass'; f4.frequency.value=1300; f4.Q.value=1.8;
+    osc4.connect(f4); f4.connect(g4); g4.connect(out); osc4.start(t+0.05); osc4.stop(t+0.3);
 }
 
-// Adım sesi
-let _footstepClock = 0;
+// --- DÜŞMAN ÖLÜM SESİ ---
+function playEnemyDeathSFX() {
+    if(!audioCtxSFX) return; const ctx=audioCtxSFX; const t=ctx.currentTime; const out=_sfxGain||ctx.destination;
+    // Augment kısa devre
+    const osc=ctx.createOscillator(); osc.type='sawtooth';
+    osc.frequency.setValueAtTime(820,t); osc.frequency.exponentialRampToValueAtTime(180,t+0.17);
+    const f=ctx.createBiquadFilter(); f.type='bandpass'; f.frequency.value=2200; f.Q.value=2;
+    const g=ctx.createGain(); g.gain.setValueAtTime(0.16,t); g.gain.exponentialRampToValueAtTime(0.001,t+0.19);
+    osc.connect(f); f.connect(g); g.connect(out); osc.start(t); osc.stop(t+0.21);
+    // Robotik ölüm tonu
+    const osc2=ctx.createOscillator(); osc2.type='square';
+    osc2.frequency.setValueAtTime(460,t+0.06); osc2.frequency.exponentialRampToValueAtTime(38,t+0.45);
+    const g2=ctx.createGain(); g2.gain.setValueAtTime(0.09,t+0.06); g2.gain.exponentialRampToValueAtTime(0.001,t+0.48);
+    osc2.connect(g2); g2.connect(out); osc2.start(t+0.06); osc2.stop(t+0.5);
+    // İmplant patlama gürültüsü
+    const buf=ctx.createBuffer(1,Math.ceil(ctx.sampleRate*0.09),ctx.sampleRate);
+    const bd=buf.getChannelData(0); for(let k=0;k<bd.length;k++) bd[k]=(Math.random()*2-1)*Math.exp(-k/bd.length*12);
+    const src=ctx.createBufferSource(); src.buffer=buf;
+    const bf=ctx.createBiquadFilter(); bf.type='lowpass'; bf.frequency.value=700;
+    const bg=ctx.createGain(); bg.gain.setValueAtTime(0.32,t+0.05); bg.gain.exponentialRampToValueAtTime(0.001,t+0.16);
+    src.connect(bf); bf.connect(bg); bg.connect(out); src.start(t+0.05); src.stop(t+0.18);
+}
+
+// --- LOOT SESİ ---
+function playLootSFX() {
+    if(!audioCtxSFX) return; const ctx=audioCtxSFX; if(ctx.state==='suspended') ctx.resume();
+    const t=ctx.currentTime; const out=_sfxGain||ctx.destination;
+    const osc=ctx.createOscillator(); osc.type='sine';
+    osc.frequency.setValueAtTime(820,t); osc.frequency.linearRampToValueAtTime(1640,t+0.15);
+    const g=ctx.createGain(); g.gain.setValueAtTime(0.1,t); g.gain.linearRampToValueAtTime(0.01,t+0.15);
+    osc.connect(g); g.connect(out); osc.start(t); osc.stop(t+0.16);
+}
+
+// --- ADIM SESİ ---
+let _footstepClock=0;
 function playFootstepSFX(dt) {
     if(!audioCtxSFX) return;
-    _footstepClock += dt;
-    if(_footstepClock < 0.38) return;
-    _footstepClock = 0;
-    const ctx = audioCtxSFX; const t = ctx.currentTime;
-    const buf = ctx.createBuffer(1, ctx.sampleRate * 0.06, ctx.sampleRate);
-    const data = buf.getChannelData(0);
-    for(let i=0;i<data.length;i++) data[i] = (Math.random()*2-1) * Math.exp(-i/(data.length*0.18));
-    const src = ctx.createBufferSource(); src.buffer = buf;
-    const filter = ctx.createBiquadFilter(); filter.type = 'bandpass'; filter.frequency.value = 180; filter.Q.value = 0.8;
-    const gain = ctx.createGain(); gain.gain.setValueAtTime(0.14, t); gain.gain.exponentialRampToValueAtTime(0.001, t+0.06);
-    src.connect(filter); filter.connect(gain); gain.connect(ctx.destination); src.start(t); src.stop(t+0.07);
+    _footstepClock+=dt; if(_footstepClock<0.38) return; _footstepClock=0;
+    const ctx=audioCtxSFX; const t=ctx.currentTime; const out=_sfxGain||ctx.destination;
+    const buf=ctx.createBuffer(1,Math.ceil(ctx.sampleRate*0.06),ctx.sampleRate);
+    const data=buf.getChannelData(0);
+    for(let i=0;i<data.length;i++) data[i]=(Math.random()*2-1)*Math.exp(-i/(data.length*0.18));
+    const src=ctx.createBufferSource(); src.buffer=buf;
+    const filt=ctx.createBiquadFilter(); filt.type='bandpass'; filt.frequency.value=180; filt.Q.value=0.8;
+    const gain=ctx.createGain(); gain.gain.setValueAtTime(0.12,t); gain.gain.exponentialRampToValueAtTime(0.001,t+0.06);
+    src.connect(filt); filt.connect(gain); gain.connect(out); src.start(t); src.stop(t+0.07);
 }
 
-// Araç motor sesi (mesafeye ve hıza göre)
-let _engineNode = null; let _engineGain = null;
+// --- HOVER CAR SESİ ---
+let _engineNode=null, _engineGain=null, _engineTurbine=null, _engineEM=null;
 function updateEngineSFX(speed, isDriving) {
-    if(!audioCtxSFX) return;
-    const ctx = audioCtxSFX;
+    if(!audioCtxSFX) return; const ctx=audioCtxSFX; const out=_sfxGain||ctx.destination;
     if(isDriving) {
         if(!_engineNode) {
-            _engineNode = ctx.createOscillator(); _engineNode.type = 'sawtooth';
-            const dist = ctx.createWaveShaper();
-            const curve = new Float32Array(256);
-            for(let i=0;i<256;i++){ const x=i*2/256-1; curve[i]=x<0?-Math.pow(-x,0.6):Math.pow(x,0.6); }
-            dist.curve = curve;
-            const filt = ctx.createBiquadFilter(); filt.type='lowpass'; filt.frequency.value=350;
-            _engineGain = ctx.createGain(); _engineGain.gain.value = 0.0;
-            _engineNode.connect(dist); dist.connect(filt); filt.connect(_engineGain); _engineGain.connect(ctx.destination);
-            _engineNode.start();
-            _engineNode._filter = filt;
+            // Ana motor
+            _engineNode=ctx.createOscillator(); _engineNode.type='sawtooth';
+            const dist=ctx.createWaveShaper();
+            const curve=new Float32Array(256); for(let i=0;i<256;i++){const x=i*2/256-1;curve[i]=x<0?-Math.pow(-x,0.6):Math.pow(x,0.6);} dist.curve=curve;
+            const filt=ctx.createBiquadFilter(); filt.type='lowpass'; filt.frequency.value=350;
+            _engineGain=ctx.createGain(); _engineGain.gain.value=0.0;
+            _engineNode.connect(dist); dist.connect(filt); filt.connect(_engineGain); _engineGain.connect(out);
+            _engineNode.start(); _engineNode._filter=filt;
+            // Türbin whine
+            _engineTurbine=ctx.createOscillator(); _engineTurbine.type='sine'; _engineTurbine.frequency.value=320;
+            const tG=ctx.createGain(); tG.gain.value=0.0;
+            const tF=ctx.createBiquadFilter(); tF.type='bandpass'; tF.frequency.value=900; tF.Q.value=1.2;
+            _engineTurbine.connect(tF); tF.connect(tG); tG.connect(out); _engineTurbine.start(); _engineTurbine._g=tG;
+            // Elektromanyetik uğultu
+            _engineEM=ctx.createOscillator(); _engineEM.type='sine'; _engineEM.frequency.value=55;
+            const eG=ctx.createGain(); eG.gain.value=0.0;
+            const eF=ctx.createBiquadFilter(); eF.type='lowpass'; eF.frequency.value=110;
+            _engineEM.connect(eF); eF.connect(eG); eG.connect(out); _engineEM.start(); _engineEM._g=eG;
         }
-        const norm = Math.abs(speed) / 80;
-        _engineNode.frequency.setTargetAtTime(55 + norm * 120, ctx.currentTime, 0.1);
-        _engineNode._filter.frequency.setTargetAtTime(200 + norm * 500, ctx.currentTime, 0.1);
-        _engineGain.gain.setTargetAtTime(0.07 + norm * 0.06, ctx.currentTime, 0.08);
+        const norm=Math.abs(speed)/80;
+        _engineNode.frequency.setTargetAtTime(55+norm*120, ctx.currentTime, 0.1);
+        _engineNode._filter.frequency.setTargetAtTime(200+norm*500, ctx.currentTime, 0.1);
+        _engineGain.gain.setTargetAtTime(0.05+norm*0.04, ctx.currentTime, 0.08);
+        _engineTurbine.frequency.setTargetAtTime(320+norm*700, ctx.currentTime, 0.18);
+        _engineTurbine._g.gain.setTargetAtTime(0.03+norm*0.07, ctx.currentTime, 0.15);
+        _engineEM.frequency.setTargetAtTime(55+norm*25, ctx.currentTime, 0.25);
+        _engineEM._g.gain.setTargetAtTime(0.04+norm*0.035, ctx.currentTime, 0.25);
     } else {
-        if(_engineNode) { _engineGain.gain.setTargetAtTime(0, ctx.currentTime, 0.15); setTimeout(()=>{ try{ _engineNode.stop(); }catch(e){} _engineNode=null; _engineGain=null; }, 500); }
+        if(_engineNode){
+            _engineGain.gain.setTargetAtTime(0, ctx.currentTime, 0.15);
+            if(_engineTurbine?._g) _engineTurbine._g.gain.setTargetAtTime(0, ctx.currentTime, 0.25);
+            if(_engineEM?._g)      _engineEM._g.gain.setTargetAtTime(0, ctx.currentTime, 0.35);
+            const n=_engineNode, t2=_engineTurbine, e=_engineEM;
+            setTimeout(()=>{ [n,t2,e].forEach(x=>{try{x&&x.stop();}catch(_){}});
+                _engineNode=null;_engineGain=null;_engineTurbine=null;_engineEM=null; }, 700);
+        }
     }
 }
 
-// Neon cızırtı sesi (ambient, rastgele)
-let _neonBuzzClock = 0;
+// --- YAĞMUR SESİ ---
+function startRain(context='open') {
+    if(!audioCtxSFX||_rainNode) return; const ctx=audioCtxSFX;
+    const buf=ctx.createBuffer(2,Math.ceil(ctx.sampleRate*2),ctx.sampleRate);
+    for(let ch=0;ch<2;ch++){const d=buf.getChannelData(ch); for(let i=0;i<d.length;i++) d[i]=Math.random()*2-1;}
+    _rainNode=ctx.createBufferSource(); _rainNode.buffer=buf; _rainNode.loop=true;
+    const filt=ctx.createBiquadFilter();
+    if(context==='tunnel'){filt.type='bandpass'; filt.frequency.value=750; filt.Q.value=2;}
+    else if(context==='under'){filt.type='lowpass'; filt.frequency.value=1100;}
+    else{filt.type='highpass'; filt.frequency.value=2800;}
+    _rainGain=ctx.createGain(); _rainGain.gain.value=0;
+    _rainNode.connect(filt); filt.connect(_rainGain); _rainGain.connect(_ambienceGain||ctx.destination);
+    _rainNode.start(); _rainGain.gain.setTargetAtTime(0.09, ctx.currentTime, 1.8);
+}
+function stopRain() {
+    if(!_rainNode) return; const ctx=audioCtxSFX;
+    _rainGain.gain.setTargetAtTime(0, ctx.currentTime, 1.2);
+    const r=_rainNode; _rainNode=null;
+    setTimeout(()=>{ try{r.stop();}catch(e){} _rainGain=null; }, 1800);
+}
+
+// --- HACK SİDECHAİN ---
+function hackSidechainOn() {
+    if(!audioCtxSFX||!_musicGain) return; const ctx=audioCtxSFX;
+    _hackSidechainActive=true;
+    _musicGain.gain.setTargetAtTime(0.07, ctx.currentTime, 0.12);
+    _ambienceGain.gain.setTargetAtTime(0.08, ctx.currentTime, 0.15);
+    // Kalp atışı + dijital pulse
+    for(let i=0;i<7;i++){
+        const t=ctx.currentTime+i*0.62;
+        const osc=ctx.createOscillator(); osc.type='sine';
+        osc.frequency.setValueAtTime(58,t); osc.frequency.exponentialRampToValueAtTime(28,t+0.14);
+        const g=ctx.createGain(); g.gain.setValueAtTime(0.2,t); g.gain.exponentialRampToValueAtTime(0.001,t+0.2);
+        osc.connect(g); g.connect(_sfxGain||ctx.destination); osc.start(t); osc.stop(t+0.22);
+        // Digital tick
+        const osc2=ctx.createOscillator(); osc2.type='square'; osc2.frequency.value=480;
+        const g2=ctx.createGain(); g2.gain.setValueAtTime(0,t+0.05); g2.gain.linearRampToValueAtTime(0.065,t+0.07); g2.gain.linearRampToValueAtTime(0,t+0.13);
+        const f2=ctx.createBiquadFilter(); f2.type='bandpass'; f2.frequency.value=2200;
+        osc2.connect(f2); f2.connect(g2); g2.connect(_sfxGain||ctx.destination); osc2.start(t+0.05); osc2.stop(t+0.15);
+    }
+    setTimeout(hackSidechainOff, 4500);
+}
+function hackSidechainOff() {
+    if(!audioCtxSFX||!_musicGain) return; const ctx=audioCtxSFX;
+    _hackSidechainActive=false;
+    _musicGain.gain.setTargetAtTime(0.65, ctx.currentTime, 0.4);
+    _ambienceGain.gain.setTargetAtTime(0.5, ctx.currentTime, 0.5);
+}
+
+// --- ARANAN SEVİYE MÜZİĞİ ---
+async function startWantedMusic() {
+    if(!audioCtxSFX||_wantedMusicActive||_chaseLayerSrc) return;
+    _wantedMusicActive=true; const ctx=audioCtxSFX;
+    const bpm=148; const beatLen=60/bpm; const bars=16; const loopDur=beatLen*bars;
+    const offCtx=new OfflineAudioContext(1,Math.ceil(ctx.sampleRate*loopDur),ctx.sampleRate);
+    for(let i=0;i<bars;i++){
+        const t=i*beatLen; const beat=i%4;
+        // Hızlı alarm tone
+        const osc=offCtx.createOscillator(); osc.type='square';
+        osc.frequency.value=900+(beat===0?220:0);
+        const g=offCtx.createGain(); g.gain.setValueAtTime(0.06,t); g.gain.exponentialRampToValueAtTime(0.001,t+beatLen*0.4);
+        const f=offCtx.createBiquadFilter(); f.type='bandpass'; f.frequency.value=1600;
+        osc.connect(f); f.connect(g); g.connect(offCtx.destination); osc.start(t); osc.stop(t+beatLen*0.5);
+        // Sert kick
+        const osc2=offCtx.createOscillator(); osc2.frequency.setValueAtTime(65,t); osc2.frequency.exponentialRampToValueAtTime(0.01,t+0.19);
+        const g2=offCtx.createGain(); g2.gain.setValueAtTime(0.45,t); g2.gain.exponentialRampToValueAtTime(0.001,t+0.21);
+        osc2.connect(g2); g2.connect(offCtx.destination); osc2.start(t); osc2.stop(t+0.23);
+    }
+    const buf=await offCtx.startRendering();
+    _chaseLayerGain=ctx.createGain(); _chaseLayerGain.gain.value=0;
+    _chaseLayerSrc=ctx.createBufferSource(); _chaseLayerSrc.buffer=buf; _chaseLayerSrc.loop=true;
+    _chaseLayerSrc.connect(_chaseLayerGain); _chaseLayerGain.connect(_masterGain||ctx.destination);
+    _chaseLayerSrc.start();
+    _chaseLayerGain.gain.setTargetAtTime(0.42, ctx.currentTime, 0.6);
+}
+function stopWantedMusic() {
+    if(!_wantedMusicActive||!_chaseLayerSrc) return;
+    _wantedMusicActive=false; const ctx=audioCtxSFX;
+    _chaseLayerGain.gain.setTargetAtTime(0, ctx.currentTime, 1.2);
+    const old=_chaseLayerSrc; _chaseLayerSrc=null;
+    setTimeout(()=>{ try{old.stop();}catch(e){} }, 1600);
+}
+
+// --- NPC BÖLGESEL SES HATLARI ---
+const NPC_LINES=[
+    '"Hey choom!"', '"Keep walking."', '"System\'s dead tonight…"',
+    '"Credits or nothing."', '"Stay frosty."', '"Flatline incoming."',
+    '"Watch your back, choom."', '"Net\'s down again."', '"Corp dogs everywhere."'
+];
+function maybeShowNPCLine(dt) {
+    if(!audioCtxSFX) return;
+    _npcLineClock+=dt;
+    if(_npcLineClock < 20+Math.random()*25) return;
+    _npcLineClock=0;
+    const line=NPC_LINES[Math.floor(Math.random()*NPC_LINES.length)];
+    const el=document.createElement('div');
+    el.style.cssText='position:fixed;bottom:210px;left:50%;transform:translateX(-50%);color:#99ccbb;font-family:"Share Tech Mono",monospace;font-size:12px;letter-spacing:1px;padding:5px 14px;background:rgba(0,18,12,0.72);border:1px solid rgba(0,180,130,0.28);border-left:3px solid #0b8;pointer-events:none;z-index:200;opacity:0;transition:opacity 0.35s;white-space:nowrap;';
+    el.innerText=line;
+    document.body.appendChild(el);
+    setTimeout(()=>el.style.opacity='1',40);
+    setTimeout(()=>{el.style.opacity='0';setTimeout(()=>el.remove(),450);},3400);
+    // Kısa beep
+    if(audioCtxSFX){ const ctx=audioCtxSFX; const t=ctx.currentTime;
+        const osc=ctx.createOscillator(); osc.type='sine'; osc.frequency.value=300+Math.random()*130;
+        const g=ctx.createGain(); g.gain.setValueAtTime(0.035,t); g.gain.exponentialRampToValueAtTime(0.001,t+0.07);
+        osc.connect(g); g.connect(_sfxGain||ctx.destination); osc.start(t); osc.stop(t+0.08);
+    }
+}
+
+// --- NEON CIZIRTILAR (ambient) ---
+let _neonBuzzClock=0;
 function maybePlayNeonBuzz(dt) {
     if(!audioCtxSFX) return;
-    _neonBuzzClock += dt;
-    if(_neonBuzzClock < 4 + Math.random()*6) return;
-    _neonBuzzClock = 0;
-    const ctx = audioCtxSFX; const t = ctx.currentTime;
-    const osc = ctx.createOscillator(); osc.type = 'square'; osc.frequency.value = 120 + Math.random()*80;
-    const gain = ctx.createGain(); gain.gain.setValueAtTime(0.03, t); gain.gain.exponentialRampToValueAtTime(0.0, t+0.35);
-    const filt = ctx.createBiquadFilter(); filt.type='bandpass'; filt.frequency.value=3000; filt.Q.value=0.5;
-    osc.connect(filt); filt.connect(gain); gain.connect(ctx.destination); osc.start(t); osc.stop(t+0.4);
+    _neonBuzzClock+=dt;
+    if(_neonBuzzClock < 4+Math.random()*7) return;
+    _neonBuzzClock=0;
+    const ctx=audioCtxSFX; const t=ctx.currentTime; const out=_sfxGain||ctx.destination;
+    const osc=ctx.createOscillator(); osc.type='square'; osc.frequency.value=115+Math.random()*90;
+    const gain=ctx.createGain(); gain.gain.setValueAtTime(0.022,t); gain.gain.exponentialRampToValueAtTime(0.0,t+0.38);
+    const filt=ctx.createBiquadFilter(); filt.type='bandpass'; filt.frequency.value=3100; filt.Q.value=0.5;
+    osc.connect(filt); filt.connect(gain); gain.connect(out); osc.start(t); osc.stop(t+0.42);
 }
 
-// Çarpma sesi
+// --- ÇARPMA SESİ ---
 function playCollisionSFX() {
-    if(!audioCtxSFX) return; const ctx = audioCtxSFX; const t = ctx.currentTime;
-    const buf = ctx.createBuffer(1, ctx.sampleRate * 0.25, ctx.sampleRate);
-    const data = buf.getChannelData(0);
-    for(let i=0;i<data.length;i++) data[i] = (Math.random()*2-1) * Math.max(0, 1 - i/(data.length*0.4));
-    const src = ctx.createBufferSource(); src.buffer = buf;
-    const filter = ctx.createBiquadFilter(); filter.type='lowpass'; filter.frequency.value=400;
-    const gain = ctx.createGain(); gain.gain.setValueAtTime(0.4, t); gain.gain.exponentialRampToValueAtTime(0.001, t+0.25);
-    src.connect(filter); filter.connect(gain); gain.connect(ctx.destination); src.start(t); src.stop(t+0.28);
+    if(!audioCtxSFX) return; const ctx=audioCtxSFX; const t=ctx.currentTime; const out=_sfxGain||ctx.destination;
+    const buf=ctx.createBuffer(1,Math.ceil(ctx.sampleRate*0.25),ctx.sampleRate);
+    const data=buf.getChannelData(0);
+    for(let i=0;i<data.length;i++) data[i]=(Math.random()*2-1)*Math.max(0,1-i/(data.length*0.4));
+    const src=ctx.createBufferSource(); src.buffer=buf;
+    const filter=ctx.createBiquadFilter(); filter.type='lowpass'; filter.frequency.value=400;
+    const gain=ctx.createGain(); gain.gain.setValueAtTime(0.38,t); gain.gain.exponentialRampToValueAtTime(0.001,t+0.26);
+    src.connect(filter); filter.connect(gain); gain.connect(out); src.start(t); src.stop(t+0.29);
 }
 
-document.body.addEventListener('pointerdown', createAndPlayBGM, { once: true });
-document.body.addEventListener('touchstart', createAndPlayBGM, { once: true });
+document.body.addEventListener('pointerdown', createAndPlayBGM, {once:true});
+document.body.addEventListener('touchstart',  createAndPlayBGM, {once:true});
 
 window.onload = function() {
     
@@ -3084,8 +3474,8 @@ window.onload = function() {
         GAME.isDriving = false;
         GAME.currentVehicle = null;
         GAME.isShooting = false;
-        GAME.metroLookYaw = 0;
-        GAME.metroLookPitch = 0;
+        GAME.metroLookYaw = Math.PI; // pencereden dışarı bak
+        GAME.metroLookPitch = -0.22; // hafif aşağı — şehir manzarası
         playerMesh.visible = false;
         gunGroup.visible = false;
         metroWindowOverlay.visible = true;
@@ -3126,7 +3516,10 @@ window.onload = function() {
         const train = GAME.metroTrain;
         const forward = new THREE.Vector3(0,0,1).applyAxisAngle(new THREE.Vector3(0,1,0), train.rotation.y).normalize();
         const right = new THREE.Vector3(1,0,0).applyAxisAngle(new THREE.Vector3(0,1,0), train.rotation.y).normalize();
-        const camPos = train.position.clone().add(right.multiplyScalar(1.25)).add(new THREE.Vector3(0, 1.15 + Math.sin(now*0.004)*0.025, 0));
+        // Kamera yükseltildi: ray görüntüsünün üstüne çıkmak için +3.8
+        const camPos = train.position.clone()
+            .add(right.multiplyScalar(1.4))
+            .add(new THREE.Vector3(0, 3.8 + Math.sin(now*0.004)*0.02, 0));
         camera.position.lerp(camPos, 0.35);
         camera.rotation.y = train.rotation.y + GAME.metroLookYaw;
         camera.rotation.x = GAME.metroLookPitch;
@@ -3277,6 +3670,7 @@ window.onload = function() {
         if(GAME.isPaused || GAME.isDriving || GAME.metroRiding) return; 
         provokeCity(0.35);
         let hackOverlay = document.getElementById('hack-overlay'); if(hackOverlay) { hackOverlay.style.opacity = 1; setTimeout(() => hackOverlay.style.opacity = 0, 200); }
+        hackSidechainOn(); // müzik sidechain — kalp atışı + dijital pulse öne geçer
         let target = null, minDist = Infinity;
         if(GAME.mode === 'FPS') { raycaster.setFromCamera(new THREE.Vector2(0,0), camera); const intersects = raycaster.intersectObjects(enemies); if(intersects.length > 0) target = intersects[0].object; } 
         else { for(let e of enemies) { let d = playerMesh.position.distanceTo(e.position); if(d < 50 && d < minDist && !e.isInfected) { minDist = d; target = e; } } }
@@ -3330,7 +3724,8 @@ window.onload = function() {
         GAME.score += 100; GAME.wantedLevel = Math.min(5, GAME.wantedLevel + 0.15); 
         if(scoreDisplay) scoreDisplay.innerText = GAME.score.toString().padStart(4, '0');
         if(GAME.contractIndex >= 0 && GAME.contractIndex < CONTRACTS.length) { let c = CONTRACTS[GAME.contractIndex]; if(GAME.currentKills < c.target) { GAME.currentKills++; updateTracker(); } }
-        spawnLoot(pos); setTimeout(() => spawnEntity(enemies, 'enemy', 40), 1500); 
+        spawnLoot(pos); setTimeout(() => spawnEntity(enemies, 'enemy', 40), 1500);
+        playEnemyDeathSFX();
     }
 
     function onCivilianKilled() {
@@ -3361,9 +3756,11 @@ window.onload = function() {
         // Gün/Gece döngüsü her frame güncellenir (pause'da bile yavaşça devam eder)
         updateDayNight(dt * (GAME.isPaused ? 0 : 1));
 
-        // --- GOD RAYS ANİMASYON ---
+        // --- GOD RAYS ANİMASYON (metroda gizle) ---
         const t = now * 0.001;
         for(let ray of godRaySprites) {
+            if(GAME.metroRiding) { ray.visible = false; continue; }
+            ray.visible = true;
             ray.material.opacity = ray._baseOpacity * (0.6 + Math.sin(t * 1.1 + ray._phase) * 0.4);
             ray.rotation.y += 0.0005;
         }
@@ -3577,6 +3974,22 @@ window.onload = function() {
             updateEngineSFX(GAME.isDriving ? GAME.carSpeedRaw : 0, GAME.isDriving);
             // Neon cızırtı ambient
             maybePlayNeonBuzz(dt);
+            // NPC ses hatları
+            if(!GAME.isPaused && !GAME.metroRiding) maybeShowNPCLine(dt);
+            // Bölgesel müzik — her 4 saniyede bir kontrol et
+            if(bgmInitialized && audioCtxSFX) {
+                _zoneCheckClock = (_zoneCheckClock||0) + dt;
+                if(_zoneCheckClock > 4.0) {
+                    _zoneCheckClock = 0;
+                    const newZone = getZoneFromPos(playerMesh.position);
+                    if(newZone !== _currentZone) playZoneBGM(newZone);
+                }
+            }
+            // Aranan seviye müzik katmanı
+            if(bgmInitialized && audioCtxSFX) {
+                if(GAME.wantedLevel >= 2.5 && !_wantedMusicActive) startWantedMusic();
+                else if(GAME.wantedLevel < 1.5 && _wantedMusicActive) stopWantedMusic();
+            }
 
             for(let i = lootDrops.length - 1; i >= 0; i--) {
                 let l = lootDrops[i]; l.rotation.y += gameDt * 2; l.life -= gameDt;
