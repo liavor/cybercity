@@ -328,6 +328,67 @@
         .cyber-panel { animation: panel-live 3s ease-in-out infinite; }
         #objective-tracker { animation: scan-text 8s ease-in-out infinite; }
 
+        /* --- TAKSİ SİSTEMİ HUD --- */
+        #taxi-hud {
+            display: none; position: fixed; top: 90px; right: 16px; z-index: 80;
+            font-family: 'Share Tech Mono', monospace; color: #ffe066;
+            background: rgba(30, 20, 0, 0.82); border: 1px solid rgba(255,220,0,0.35);
+            border-left: 3px solid #ffd700; padding: 10px 14px; min-width: 200px;
+            backdrop-filter: blur(6px); font-size: 12px;
+        }
+        #taxi-hud .tx-title { color: #ffd700; font-size: 11px; letter-spacing: 2px; margin-bottom: 6px; border-bottom: 1px solid rgba(255,200,0,0.3); padding-bottom: 5px; }
+        #taxi-hud .tx-phase { font-size: 14px; font-weight: bold; margin-bottom: 4px; }
+        #taxi-hud .tx-fare  { font-size: 12px; color: #aaffaa; }
+        #taxi-hud .tx-trips { font-size: 11px; color: #aaa; margin-top: 4px; }
+
+        /* --- TAKSİ YÖN OKU --- */
+        #taxi-arrow {
+            display: none; position: fixed; top: 48px; left: 50%; transform: translateX(-50%);
+            z-index: 110; text-align: center; pointer-events: none; user-select: none;
+        }
+        #taxi-arrow-icon {
+            font-size: 36px; color: #ffd700; text-shadow: 0 0 18px #ffd700, 0 0 6px #fff;
+            display: block; transition: transform 0.1s linear; line-height: 1;
+        }
+        #taxi-arrow-dest {
+            font-family: 'Share Tech Mono', monospace; font-size: 11px;
+            color: #ffe066; letter-spacing: 1px; text-shadow: 0 0 8px #ffd700;
+        }
+
+        /* --- SNIPER DÜRBÜN --- */
+        #sniper-scope {
+            display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            z-index: 95; pointer-events: none;
+            background: radial-gradient(circle at 50% 50%, transparent 18%, rgba(0,0,0,0.92) 22%);
+        }
+        #sniper-scope::before, #sniper-scope::after {
+            content: ''; position: absolute; background: rgba(0,255,180,0.55);
+        }
+        #sniper-scope::before { width: 100%; height: 1px; top: 50%; left: 0; }
+        #sniper-scope::after  { width: 1px; height: 100%; top: 0; left: 50%; }
+
+        /* --- SİLAH HUD --- */
+        #weapon-hud {
+            display: none; position: fixed; bottom: 80px; right: 20px; z-index: 90;
+            font-family: 'Share Tech Mono', monospace; font-size: 12px; color: #aaa;
+            background: rgba(0,10,20,0.75); border: 1px solid rgba(0,200,160,0.25);
+            padding: 8px 12px; border-left: 2px solid #0cf;
+        }
+        #weapon-hud .wh-slot { padding: 3px 6px; border-radius: 2px; cursor: pointer; }
+        #weapon-hud .wh-slot.active { color: #0ff; text-shadow: 0 0 8px #0ff; background: rgba(0,255,255,0.1); }
+
+        /* --- TERAS MESAJ --- */
+        #rooftop-msg {
+            display: none; position: fixed; top: 50%; left: 50%; transform: translate(-50%,-50%);
+            z-index: 95; font-family: 'Share Tech Mono', monospace; color: #0ff;
+            font-size: 18px; letter-spacing: 3px; text-align: center;
+            text-shadow: 0 0 20px #0ff; pointer-events: none;
+            animation: scan-text 2s ease-in-out;
+        }
+
+        @keyframes taxi-bounce { 0%,100%{transform:translateX(-50%) translateY(0px);} 50%{transform:translateX(-50%) translateY(-4px);} }
+        #taxi-arrow { animation: taxi-bounce 1.2s ease-in-out infinite; }
+
     </style>
 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
@@ -349,6 +410,32 @@
     <div id="penalty-msg">SİVİL ZAYİATI! -50 KREDİ</div>
     <div id="loot-msg">+ SAĞLIK YENİLENDİ</div>
     <div id="target-lock-overlay"></div>
+
+    <!-- TAKSİ HUD -->
+    <div id="taxi-hud">
+        <div class="tx-title">🚕 TAKSİ MİSYONU AKTİF</div>
+        <div class="tx-phase" id="taxi-phase">MÜŞTERİ ARANIYOR</div>
+        <div class="tx-fare" id="taxi-fare">ÜCRET: 0 KRD</div>
+        <div class="tx-trips" id="taxi-trips">SEYAHAT: 0</div>
+    </div>
+
+    <!-- TAKSİ YÖN OKU -->
+    <div id="taxi-arrow">
+        <span id="taxi-arrow-icon">▲</span>
+        <div id="taxi-arrow-dest">-- m</div>
+    </div>
+
+    <!-- SNIPER DÜRBÜN -->
+    <div id="sniper-scope"></div>
+
+    <!-- SİLAH HUD -->
+    <div id="weapon-hud">
+        <div class="wh-slot active" id="wh-1">[1] PLAZMA</div>
+        <div class="wh-slot" id="wh-2">[2] KESKİN NİŞANCİ</div>
+    </div>
+
+    <!-- TERAS MESAJ -->
+    <div id="rooftop-msg">▲ TERAS ERİŞİMİ SAĞLANDI<br><span style="font-size:13px;color:#88ffcc">KESKİN NİŞANCİ TÜFEĞİ VERİLDİ</span></div>
     <div id="bounty-hud">
         <div class="bh-title">▶ AKTİF KONTRAT: SUİKAST</div>
         <div class="bh-target" id="bh-target-desc">Hedef tanımlanıyor...</div>
@@ -954,7 +1041,7 @@ function maybePlayNeonBuzz(dt) {
     _neonBuzzClock=0;
     const ctx=audioCtxSFX; const t=ctx.currentTime; const out=_sfxGain||ctx.destination;
     const osc=ctx.createOscillator(); osc.type='square'; osc.frequency.value=115+Math.random()*90;
-    const gain=ctx.createGain(); gain.gain.setValueAtTime(0.022,t); gain.gain.exponentialRampToValueAtTime(0.0,t+0.38);
+    const gain=ctx.createGain(); gain.gain.setValueAtTime(0.022,t); gain.gain.exponentialRampToValueAtTime(0.0001,t+0.38);
     const filt=ctx.createBiquadFilter(); filt.type='bandpass'; filt.frequency.value=3100; filt.Q.value=0.5;
     osc.connect(filt); filt.connect(gain); gain.connect(out); osc.start(t); osc.stop(t+0.42);
 }
@@ -1019,6 +1106,15 @@ window.onload = function() {
         wantedLevel: 0, combatProvoked: false, isDashing: false, dashTimer: 0, dashCooldown: 0,
         isDriving: false, currentVehicle: null, carSpeedRaw: 0,
         metroRiding: false, metroTrain: null, metroLastStation: null, metroLookYaw: 0, metroLookPitch: 0,
+        // Taksi sistemi
+        taxiActive: false, taxiPhase: 'idle', taxiPassenger: null, taxiPassengerPos: null,
+        taxiDestPos: null, taxiFare: 0, taxiTripCount: 0,
+        // Teras / Çatı sistemi
+        onRooftop: false, rooftopY: 0, rooftopBuilding: null,
+        // Silah sistemi
+        weaponSlot: 1, // 1=plazma, 2=keskin nişancı
+        // Düşme hasarı
+        _fallFromY: null, _lastGrounded: true,
         // --- ZIPLAMA FİZİĞİ ---
         velocityY: 0,
         isGrounded: true,      // yerde mi?
@@ -1388,7 +1484,9 @@ window.onload = function() {
         rainLines: []
     };
 
-    const obstacles = []; const holograms = []; const gridStep = 60; 
+    const obstacles = []; const holograms = []; const gridStep = 60;
+    const buildingEntries = []; // Bina giriş noktaları (teras ışınlanma)
+    let taxiCar = null;        // Tek sarı taksi araç referansı
     const holoTex = createHoloTexture();
 
     // =========================================================
@@ -1451,6 +1549,30 @@ window.onload = function() {
                 const building = new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1), currentMat); building.scale.set(w, h, d); building.position.set(bX, -1 + h/2, bZ); 
                 worldGroup.add(building); building.updateMatrixWorld(true); obstacles.push(new THREE.Box3().setFromObject(building));
                 buildings.push({ mesh: building, x: bX, z: bZ, w, h, d, district: z > 100 ? 'industrial' : (z < -100 ? 'plaza' : 'street') });
+
+                // Çok yüksek binalar için giriş kapısı + teras ışınlanma noktası
+                if(h > 44 && Math.random() > 0.68 && buildingEntries.length < 12) {
+                    // Giriş kapısı hologram mesh
+                    const doorH = 3.8, doorW = 3.0;
+                    const doorMat = new THREE.MeshBasicMaterial({ color: 0x00ffcc, transparent: true, opacity: 0.55, side: THREE.DoubleSide });
+                    const doorGeo = new THREE.PlaneGeometry(doorW, doorH);
+                    const doorMesh = new THREE.Mesh(doorGeo, doorMat);
+                    // Binanın ön cephesine yerleştir
+                    const doorX = bX; const doorZ = bZ - d/2 - 0.15;
+                    doorMesh.position.set(doorX, doorH/2 - 1 + 0.2, doorZ);
+                    // Kapı çerçevesi
+                    const frameMat = new THREE.MeshBasicMaterial({ color: 0x00ffaa, wireframe: true });
+                    const frameMesh = new THREE.Mesh(new THREE.BoxGeometry(doorW+0.3, doorH+0.3, 0.1), frameMat);
+                    frameMesh.position.copy(doorMesh.position);
+                    scene.add(doorMesh); scene.add(frameMesh);
+                    buildingEntries.push({
+                        door: doorMesh, frame: frameMesh,
+                        entryPos: new THREE.Vector3(doorX, 0.2, doorZ - 2.5),
+                        rooftopPos: new THREE.Vector3(bX, h + 0.2, bZ),
+                        rooftopY: h,
+                        bW: w, bD: d
+                    });
+                }
 
                 // Prosedürel çatı detayları
                 addProceduralRooftopDetails(bX, bZ, h, w, d, currentMat);
@@ -2056,6 +2178,24 @@ window.onload = function() {
         scene.add(carGroup); vehicles.push(carGroup);
     }
 
+    // === SARI TAKSİ (tek, özel) ===
+    const TAXI_PALETTE = { body: 0xffd700, neon: 0xffaa00, glass: 0x334433, accent: 0xff8800 };
+    taxiCar = createDetailedCar(TAXI_PALETTE, true);
+    taxiCar.isTaxi = true; taxiCar.isParked = true; taxiCar.isPlayerDriven = false;
+    taxiCar.speed = 0; taxiCar.isVertical = true; taxiCar.direction = 1;
+    // Sadece X ve Z set ediyoruz — Y createDetailedCar'ın ayarladığı -0.5 değerinde kalır
+    taxiCar.position.x = 18;
+    taxiCar.position.z = 18;
+    taxiCar.rotation.y = Math.PI / 4;
+    // Taksi tabelası
+    const taxiSignGeo = new THREE.BoxGeometry(1.4, 0.4, 0.5);
+    const taxiSignMat = new THREE.MeshBasicMaterial({ color: 0xffd700 });
+    const taxiSign = new THREE.Mesh(taxiSignGeo, taxiSignMat);
+    taxiSign.position.set(0, 1.6, 0); taxiCar.add(taxiSign);
+    const taxiSignText = new THREE.Mesh(new THREE.BoxGeometry(1.2, 0.25, 0.1), new THREE.MeshBasicMaterial({color:0x111100}));
+    taxiSignText.position.set(0, 0, 0.26); taxiSign.add(taxiSignText);
+    scene.add(taxiCar); vehicles.push(taxiCar);
+
     const playerGeo = new THREE.BoxGeometry(1.2, 2.4, 1.2); const playerMat = new THREE.MeshBasicMaterial({ color: glowCyan, wireframe: true });
     const playerMesh = new THREE.Mesh(playerGeo, playerMat); playerMesh.position.set(0, 0.2, 0); scene.add(playerMesh);
     const playerCore = new THREE.Mesh(new THREE.BoxGeometry(1.1, 2.3, 1.1), new THREE.MeshStandardMaterial({ color: 0x002244, metalness: 0.8, roughness: 0.2 })); playerMesh.add(playerCore);
@@ -2066,6 +2206,19 @@ window.onload = function() {
     const stripe = new THREE.Mesh(new THREE.BoxGeometry(0.16, 0.04, 0.5), new THREE.MeshBasicMaterial({ color: new THREE.Color(0, 0.3, 0.4) })); stripe.position.set(0.4, -0.22, -0.5); gunGroup.add(stripe);
     const muzzleMesh = new THREE.Mesh(new THREE.PlaneGeometry(0.4, 0.4), new THREE.MeshBasicMaterial({ color: new THREE.Color(1.5, 1.2, 0), transparent: true, opacity: 0 })); muzzleMesh.position.set(0.4, -0.25, -1.2); gunGroup.add(muzzleMesh);
     camera.add(gunGroup); scene.add(camera);
+
+    // === KESKİN NİŞANCİ TÜFEĞİ ===
+    const sniperGroup = new THREE.Group(); sniperGroup.visible = false;
+    // Uzun namlu
+    const sniperBody = new THREE.Mesh(new THREE.BoxGeometry(0.13, 0.18, 1.2), new THREE.MeshStandardMaterial({color:0x1a1a1a,metalness:0.95,roughness:0.2})); sniperBody.position.set(0.35,-0.32,-0.7); sniperGroup.add(sniperBody);
+    const sniperBarrel = new THREE.Mesh(new THREE.BoxGeometry(0.07,0.07,0.8), new THREE.MeshStandardMaterial({color:0x050505,metalness:1,roughness:0.05})); sniperBarrel.position.set(0.35,-0.27,-1.4); sniperGroup.add(sniperBarrel);
+    // Dürbün
+    const scopeBody = new THREE.Mesh(new THREE.CylinderGeometry(0.07,0.07,0.35,8), new THREE.MeshStandardMaterial({color:0x222222,metalness:0.9})); scopeBody.rotation.x=Math.PI/2; scopeBody.position.set(0.35,-0.19,-0.65); sniperGroup.add(scopeBody);
+    const scopeGlass = new THREE.Mesh(new THREE.CylinderGeometry(0.06,0.06,0.04,8), new THREE.MeshBasicMaterial({color:0x003366,transparent:true,opacity:0.8})); scopeGlass.rotation.x=Math.PI/2; scopeGlass.position.set(0.35,-0.19,-0.47); sniperGroup.add(scopeGlass);
+    // Yeşil aksan
+    const sniperStripe = new THREE.Mesh(new THREE.BoxGeometry(0.14,0.03,0.9), new THREE.MeshBasicMaterial({color:new THREE.Color(0,0.8,0.3)})); sniperStripe.position.set(0.35,-0.23,-0.7); sniperGroup.add(sniperStripe);
+    const sniperMuzzle = new THREE.Mesh(new THREE.PlaneGeometry(0.4,0.4), new THREE.MeshBasicMaterial({color:new THREE.Color(1.5,1.2,0),transparent:true,opacity:0})); sniperMuzzle.position.set(0.35,-0.27,-1.85); sniperGroup.add(sniperMuzzle);
+    camera.add(sniperGroup);
 
     const vehicleCockpit = new THREE.Group(); vehicleCockpit.visible = false;
     const dashMat = new THREE.MeshBasicMaterial({ color:0x05070d, transparent:true, opacity:0.86 });
@@ -3532,12 +3685,23 @@ window.onload = function() {
         if(GAME.metroRiding) { exitMetroIfPossible(); return; }
         const metroStation = !GAME.isDriving ? getNearestMetroStation(8) : null;
         if(metroStation) { boardMetro(metroStation); return; }
+        // Bina girişi kontrolü
+        if(!GAME.isDriving && !GAME.metroRiding) {
+            for(let entry of buildingEntries) {
+                if(playerMesh.position.distanceTo(entry.entryPos) < 5.5) {
+                    enterBuilding(entry); return;
+                }
+            }
+        }
         if(GAME.isDriving) {
             GAME.isDriving = false; GAME.currentVehicle.isPlayerDriven = false; GAME.currentVehicle.isParked = true; GAME.currentVehicle.speed = 0;
             let fl = GAME.currentVehicle.getObjectByName("headlight"); if(fl) fl.material.color = noGlow; let bl = GAME.currentVehicle.getObjectByName("taillight"); if(bl) bl.material.color = noGlow;
             _vPos.set(-3, 0, 0).applyAxisAngle(new THREE.Vector3(0,1,0), GAME.currentVehicle.rotation.y);
             playerMesh.position.copy(GAME.currentVehicle.position).add(_vPos); playerMesh.position.y = -1 + 1.2;
-            playerMesh.visible = GAME.mode === 'RTS'; gunGroup.visible = GAME.mode === 'FPS'; GAME.currentVehicle = null;
+            playerMesh.visible = GAME.mode === 'RTS';
+            gunGroup.visible = GAME.mode === 'FPS' && GAME.weaponSlot === 1;
+            sniperGroup.visible = GAME.mode === 'FPS' && GAME.weaponSlot === 2;
+            GAME.currentVehicle = null;
             if(btnInt) { btnInt.innerText = "ARACA BİN [G]"; btnInt.style.display = "none"; }
             document.getElementById('btn-hack').style.opacity = 1; document.getElementById('btn-dash').style.opacity = 1;
             if(GAME.mode === 'RTS' && GAME.isMobile && mobileOverlay) mobileOverlay.style.display = 'none';
@@ -3547,8 +3711,11 @@ window.onload = function() {
             if(closest) {
                 GAME.isDriving = true; GAME.currentVehicle = closest; closest.isPlayerDriven = true; closest.isParked = false; GAME.carSpeedRaw = closest.speed * closest.direction; 
                 let fl = closest.getObjectByName("headlight"); if(fl) fl.material.color = glowCyan; let bl = closest.getObjectByName("taillight"); if(bl) bl.material.color = glowRed;
-                playerMesh.visible = false; gunGroup.visible = false; 
-                if(btnInt) btnInt.innerText = "ARAÇTAN İN [G]";
+                playerMesh.visible = false; gunGroup.visible = false; sniperGroup.visible = false;
+                if(btnInt) {
+                    if(closest.isTaxi) btnInt.innerText = "ARAÇTAN İN [G]  |  TAKSİCİLİK [T]";
+                    else btnInt.innerText = "ARAÇTAN İN [G]";
+                }
                 document.getElementById('btn-hack').style.opacity = 0.3; document.getElementById('btn-dash').style.opacity = 0.3;
                 if(GAME.mode === 'FPS') { camera.rotation.y = closest.rotation.y; camera.rotation.x = 0; }
                 if(GAME.mode === 'RTS' && GAME.isMobile && mobileOverlay) mobileOverlay.style.display = 'block';
@@ -3574,12 +3741,24 @@ window.onload = function() {
         if(key === 'e') triggerContagion();
         if(key === 'r') triggerContagion(); // alias
         if(key === 'g') doInteract();
+        if(key === 't') startTaxiMission(); // Taksicilik başlat/iptal
+        if(key === '1') switchWeapon(1);   // Plazma
+        if(key === '2') switchWeapon(2);   // Keskin nişancı
         if(e.code === 'Space' && GAME.mode === 'FPS' && !GAME.isDriving) {
             e.preventDefault();
             if(GAME.isGrounded) GAME.jumpRequested = true;
         }
     });
     document.addEventListener('keyup', (e) => { const key = e.key.toLowerCase(); if(GAME.keys.hasOwnProperty(key)) GAME.keys[key] = false; });
+
+    // Sağ tık: sniper zoom aç/kapat
+    document.addEventListener('contextmenu', (e) => {
+        e.preventDefault();
+        if(GAME.mode === 'FPS' && GAME.weaponSlot === 2 && !GAME.isDriving) {
+            _sniperZoomed = !_sniperZoomed;
+            updateWeaponVisuals();
+        }
+    });
 
     document.addEventListener('pointerlockchange', () => { isPointerLocked = document.pointerLockElement === document.body; });
     document.addEventListener('mousemove', (e) => {
@@ -3679,6 +3858,305 @@ window.onload = function() {
 
     function infectEnemy(enemy) { enemy.isInfected = true; enemy.infectTimer = 0; enemy.infectTicks = 0; enemy.material = enemyInfectedMat; createBeam(playerMesh.position, enemy.position); }
     let btnHack = document.getElementById('btn-hack'); if(btnHack) btnHack.addEventListener('click', triggerContagion);
+
+    // ================================================================
+    // TAKSİ MİSYON SİSTEMİ
+    // ================================================================
+    const _taxiPassengerMarkers = []; // { mesh, marker } 
+    let _taxiPassengerMesh = null;
+    let _taxiDestMarker = null;
+    const TAXI_DESTINATIONS = [
+        {name:'NEON MARKET', pos: new THREE.Vector3(-120, 0.2, 60)},
+        {name:'CORP PLAZA', pos: new THREE.Vector3(0, 0.2, -180)},
+        {name:'İNDUSTRİYEL LIMAN', pos: new THREE.Vector3(150, 0.2, 150)},
+        {name:'GECEKONDU BLOK-7', pos: new THREE.Vector3(-160, 0.2, -60)},
+        {name:'HAVALİMANI KAPİSI', pos: new THREE.Vector3(80, 0.2, -220)},
+        {name:'HACK ÇARŞISI', pos: new THREE.Vector3(-80, 0.2, 100)},
+        {name:'VİP KULÜP ZETA', pos: new THREE.Vector3(60, 0.2, -120)},
+        {name:'ŞANTİYE K-14', pos: new THREE.Vector3(200, 0.2, 80)},
+    ];
+
+    function startTaxiMission() {
+        if(!GAME.isDriving || GAME.currentVehicle !== taxiCar) return;
+        if(GAME.taxiActive) { cancelTaxiMission(); return; }
+        GAME.taxiActive = true;
+        GAME.taxiPhase = 'find_passenger';
+        GAME.taxiTripCount = 0;
+        GAME.taxiFare = 0;
+        document.getElementById('taxi-hud').style.display = 'block';
+        document.getElementById('taxi-arrow').style.display = 'block';
+        spawnTaxiPassenger();
+        showLootMessage('🚕 TAKSİCİLİK BAŞLADI — MÜŞTERİ BUL!', '#ffd700');
+    }
+
+    function cancelTaxiMission() {
+        GAME.taxiActive = false; GAME.taxiPhase = 'idle';
+        document.getElementById('taxi-hud').style.display = 'none';
+        document.getElementById('taxi-arrow').style.display = 'none';
+        if(_taxiPassengerMesh) { scene.remove(_taxiPassengerMesh); _taxiPassengerMesh = null; }
+        if(_taxiDestMarker) { scene.remove(_taxiDestMarker); _taxiDestMarker = null; }
+        GAME.taxiPassengerPos = null; GAME.taxiDestPos = null;
+        showLootMessage('🚕 TAKSİ GÖREVİ İPTAL', '#ff8800');
+    }
+
+    function spawnTaxiPassenger() {
+        if(_taxiPassengerMesh) { scene.remove(_taxiPassengerMesh); _taxiPassengerMesh = null; }
+        // Rastgele cadde üzerinde bir nokta seç
+        const roads = [-120,-60,0,60,120];
+        const px = roads[Math.floor(Math.random()*roads.length)] + (Math.random()-0.5)*20;
+        const pz = roads[Math.floor(Math.random()*roads.length)] + (Math.random()-0.5)*20;
+        GAME.taxiPassengerPos = new THREE.Vector3(px, 0.2, pz);
+
+        // Müşteri mesh (parlak sarı figür)
+        const pGrp = new THREE.Group();
+        const pBody = new THREE.Mesh(new THREE.BoxGeometry(0.8,1.8,0.8), new THREE.MeshBasicMaterial({color:0xffd700}));
+        pBody.position.y = 0.9; pGrp.add(pBody);
+        const pHead = new THREE.Mesh(new THREE.SphereGeometry(0.4,8,8), new THREE.MeshBasicMaterial({color:0xffeeaa}));
+        pHead.position.y = 2.1; pGrp.add(pHead);
+        // Başın üstünde taksi işareti
+        const markerGeo = new THREE.PlaneGeometry(2.5, 1.0);
+        const markerMat = new THREE.MeshBasicMaterial({color:0xffd700, transparent:true, opacity:0.9, side:THREE.DoubleSide});
+        const marker = new THREE.Mesh(markerGeo, markerMat);
+        marker.position.y = 3.5; marker.rotation.x = -0.3;
+        // İçine sembol olarak küçük kutu
+        const mSymbol = new THREE.Mesh(new THREE.BoxGeometry(0.5,0.4,0.05), new THREE.MeshBasicMaterial({color:0x000000}));
+        mSymbol.position.y = 0.0; marker.add(mSymbol);
+        pGrp.add(marker);
+        pGrp.position.copy(GAME.taxiPassengerPos);
+        pGrp._marker = marker;
+        pGrp._isPassenger = true;
+        scene.add(pGrp);
+        _taxiPassengerMesh = pGrp;
+    }
+
+    function spawnTaxiDestMarker(destPos) {
+        if(_taxiDestMarker) { scene.remove(_taxiDestMarker); _taxiDestMarker = null; }
+        const grp = new THREE.Group();
+        // Dikine yükselen parlak sütun
+        for(let i=0;i<3;i++){
+            const ring = new THREE.Mesh(new THREE.TorusGeometry(3-i*0.7,0.12,6,24), new THREE.MeshBasicMaterial({color:0xffd700,transparent:true,opacity:0.7-i*0.2}));
+            ring.rotation.x = Math.PI/2; ring.position.y = 0.2+i*0.8; grp.add(ring);
+        }
+        const pole = new THREE.Mesh(new THREE.BoxGeometry(0.2,8,0.2), new THREE.MeshBasicMaterial({color:0xffa500,transparent:true,opacity:0.6}));
+        pole.position.y = 4; grp.add(pole);
+        grp.position.copy(destPos);
+        scene.add(grp);
+        _taxiDestMarker = grp;
+    }
+
+    function updateTaxiMission(dt, now) {
+        if(!GAME.taxiActive) return;
+        const playerPos = GAME.isDriving && GAME.currentVehicle ? GAME.currentVehicle.position : playerMesh.position;
+
+        // Marker animasyonu
+        if(_taxiPassengerMesh) {
+            _taxiPassengerMesh._marker.position.y = 3.5 + Math.sin(now*0.003)*0.3;
+            _taxiPassengerMesh.rotation.y += dt * 0.8;
+        }
+        if(_taxiDestMarker) {
+            _taxiDestMarker.rotation.y += dt * 1.2;
+            _taxiDestMarker.children.forEach((c,i)=>{ if(c.geometry.type==='TorusGeometry') c.position.y = 0.2+i*0.8+Math.sin(now*0.002+i)*0.3; });
+        }
+
+        if(GAME.taxiPhase === 'find_passenger' && GAME.taxiPassengerPos) {
+            // Müşteriye yaklaşım kontrolü
+            const d = playerPos.distanceTo(GAME.taxiPassengerPos);
+            if(d < 9) {
+                // Müşteri bindi!
+                scene.remove(_taxiPassengerMesh); _taxiPassengerMesh = null;
+                GAME.taxiPhase = 'carrying';
+                // Rastgele destinasyon seç
+                const dest = TAXI_DESTINATIONS[Math.floor(Math.random()*TAXI_DESTINATIONS.length)];
+                GAME.taxiDestPos = dest.pos.clone();
+                GAME.taxiFare = 150 + Math.floor(Math.random()*200);
+                spawnTaxiDestMarker(GAME.taxiDestPos);
+                showLootMessage(`🚕 MÜŞTERİ BİNDİ — HEDEF: ${dest.name}`, '#ffd700');
+                document.getElementById('taxi-phase').innerText = `HEDEF: ${dest.name}`;
+                document.getElementById('taxi-fare').innerText = `ÜCRET: ${GAME.taxiFare} KRD`;
+                if(audioCtxSFX){ const ctx=audioCtxSFX; const t=ctx.currentTime;
+                    const osc=ctx.createOscillator(); osc.type='sine'; osc.frequency.setValueAtTime(440,t); osc.frequency.linearRampToValueAtTime(880,t+0.15);
+                    const g=ctx.createGain(); g.gain.setValueAtTime(0.12,t); g.gain.exponentialRampToValueAtTime(0.001,t+0.2);
+                    osc.connect(g); g.connect(_sfxGain||ctx.destination); osc.start(t); osc.stop(t+0.22); }
+            }
+            document.getElementById('taxi-phase').innerText = 'MÜŞTERİ ARANIYOR...';
+
+        } else if(GAME.taxiPhase === 'carrying' && GAME.taxiDestPos) {
+            const d = playerPos.distanceTo(GAME.taxiDestPos);
+            if(d < 12) {
+                // TESLİMAT!
+                scene.remove(_taxiDestMarker); _taxiDestMarker = null;
+                GAME.taxiTripCount++;
+                GAME.score += GAME.taxiFare;
+                if(scoreDisplay) scoreDisplay.innerText = GAME.score.toString().padStart(4,'0');
+                showLootMessage(`✓ TESLİMAT TAMAM +${GAME.taxiFare} KRD`, '#00ff88');
+                document.getElementById('taxi-trips').innerText = `SEYAHAT: ${GAME.taxiTripCount}`;
+                // Yeni yolcu
+                GAME.taxiPhase = 'find_passenger';
+                GAME.taxiDestPos = null;
+                GAME.taxiFare = 0;
+                document.getElementById('taxi-phase').innerText = 'YENİ MÜŞTERİ ARANIYOR';
+                setTimeout(()=>spawnTaxiPassenger(), 800);
+                if(audioCtxSFX){ const ctx=audioCtxSFX; const t=ctx.currentTime;
+                    [0,0.12,0.24].forEach((off,i)=>{ const osc=ctx.createOscillator(); osc.type='sine'; osc.frequency.value=523+i*131; const g=ctx.createGain(); g.gain.setValueAtTime(0.1,t+off); g.gain.exponentialRampToValueAtTime(0.001,t+off+0.18); osc.connect(g); g.connect(_sfxGain||ctx.destination); osc.start(t+off); osc.stop(t+off+0.2); }); }
+            }
+        }
+
+        // Ok HUD güncelle
+        updateTaxiArrow(playerPos);
+    }
+
+    function updateTaxiArrow(playerPos) {
+        const arrowEl = document.getElementById('taxi-arrow');
+        const arrowIcon = document.getElementById('taxi-arrow-icon');
+        const arrowDist = document.getElementById('taxi-arrow-dest');
+        if(!arrowEl) return;
+
+        let target = null;
+        if(GAME.taxiPhase === 'find_passenger' && GAME.taxiPassengerPos) target = GAME.taxiPassengerPos;
+        else if(GAME.taxiPhase === 'carrying' && GAME.taxiDestPos) target = GAME.taxiDestPos;
+
+        if(!target) { arrowEl.style.display='none'; return; }
+        arrowEl.style.display = 'block';
+
+        const dx = target.x - playerPos.x;
+        const dz = target.z - playerPos.z;
+        const worldAngle = Math.atan2(dx, -dz); // world azimuth
+        const playerAngle = GAME.isDriving && GAME.currentVehicle ? GAME.currentVehicle.rotation.y : (camera.rotation.y || 0);
+        const relAngle = worldAngle - playerAngle;
+        const deg = relAngle * (180/Math.PI);
+        arrowIcon.style.transform = `rotate(${deg}deg)`;
+        const dist = Math.round(Math.sqrt(dx*dx+dz*dz));
+        arrowDist.innerText = dist + 'm';
+        // Renk: yaklaştıkça yeşile döner
+        const col = dist < 15 ? '#00ff88' : '#ffd700';
+        arrowIcon.style.color = col;
+        arrowIcon.style.textShadow = `0 0 18px ${col}`;
+    }
+
+    // ================================================================
+    // TERAS / ÇATI SİSTEMİ
+    // ================================================================
+    function enterBuilding(entry) {
+        if(GAME.isDriving || GAME.metroRiding || GAME.taxiActive) return;
+        GAME.onRooftop = true;
+        GAME.rooftopY = entry.rooftopY;
+        GAME.rooftopBuilding = entry;
+        // Zemin seviyesini hemen güncelle — ilk frame'de düşmeyi önler
+        GAME.groundY = entry.rooftopY + 0.2;
+        playerMesh.position.copy(entry.rooftopPos);
+        playerMesh.position.y = GAME.groundY; // tam zemine yerleştir
+        playerTargetPos.copy(playerMesh.position);
+        GAME.velocityY = 0; GAME.isGrounded = true; GAME._fallFromY = null;
+        GAME._lastGrounded = true;
+        // Sniper ver
+        GAME.weaponSlot = 2;
+        updateWeaponVisuals();
+        const rm = document.getElementById('rooftop-msg');
+        if(rm) { rm.style.display='block'; setTimeout(()=>rm.style.display='none', 2800); }
+        showLootMessage(`▲ TERAS [${entry.rooftopY.toFixed(0)}m] — KESKİN NİŞANCİ AKTİF`, '#00ffcc');
+        if(GAME.mode==='FPS' && !GAME.isMobile) document.body.requestPointerLock();
+    }
+
+    function checkRooftopFall() {
+        if(!GAME.onRooftop) return;
+        // Oyuncu teras zemininin 8m altına düştüyse teras modundan çık
+        if(playerMesh.position.y < GAME.rooftopY - 8) {
+            GAME.onRooftop = false;
+            GAME.rooftopBuilding = null;
+            GAME.groundY = 0.2;
+            GAME.weaponSlot = 1;
+            updateWeaponVisuals();
+            showLootMessage('▼ TERASI TERK ETTİN', '#ffaa00');
+        }
+    }
+
+    // ================================================================
+    // SİLAH SİSTEMİ
+    // ================================================================
+    let _sniperZoomed = false;
+    let _sniperCooldown = 0;
+
+    function switchWeapon(slot) {
+        if(slot === GAME.weaponSlot) return;
+        if(slot === 2 && !GAME.onRooftop) { showLootMessage('KESKİN NİŞANCI SADECE TERASTAN KULLANILIR', '#ff6600'); return; }
+        GAME.weaponSlot = slot;
+        updateWeaponVisuals();
+    }
+
+    function updateWeaponVisuals() {
+        const inFPS = GAME.mode === 'FPS' && !GAME.isDriving && !GAME.metroRiding;
+        const slot = GAME.weaponSlot;
+        gunGroup.visible    = inFPS && slot === 1;
+        sniperGroup.visible = inFPS && slot === 2;
+        // Scope overlay
+        const scopeEl = document.getElementById('sniper-scope');
+        if(scopeEl) scopeEl.style.display = (inFPS && slot===2 && _sniperZoomed) ? 'block' : 'none';
+        // Weapon HUD
+        const wHud = document.getElementById('weapon-hud');
+        const wh1  = document.getElementById('wh-1');
+        const wh2  = document.getElementById('wh-2');
+        if(wHud) wHud.style.display = inFPS ? 'block' : 'none';
+        if(wh1) wh1.className = 'wh-slot' + (slot===1?' active':'');
+        if(wh2) wh2.className = 'wh-slot' + (slot===2?' active':'');
+        // FOV değiştir (sniper zoom)
+        if(inFPS && slot===2 && _sniperZoomed) {
+            camera.fov = 15; camera.updateProjectionMatrix();
+        } else {
+            camera.fov = 75; camera.updateProjectionMatrix();
+        }
+    }
+
+    function sniperShoot() {
+        if(_sniperCooldown > 0) return;
+        _sniperCooldown = 1.8; // saniye bekleme
+        // Sniper SFX: güçlü, uzun menzil
+        if(audioCtxSFX){ const ctx=audioCtxSFX; const t=ctx.currentTime; const out=_sfxGain||ctx.destination;
+            // Bang
+            const osc=ctx.createOscillator(); osc.type='sawtooth'; osc.frequency.setValueAtTime(120,t); osc.frequency.exponentialRampToValueAtTime(0.01,t+0.4);
+            const g=ctx.createGain(); g.gain.setValueAtTime(0.5,t); g.gain.exponentialRampToValueAtTime(0.001,t+0.45);
+            const f=ctx.createBiquadFilter(); f.type='lowpass'; f.frequency.value=2000;
+            osc.connect(f); f.connect(g); g.connect(out); osc.start(t); osc.stop(t+0.5);
+            // Subsonic boom
+            const sub=ctx.createOscillator(); sub.type='sine'; sub.frequency.setValueAtTime(60,t); sub.frequency.exponentialRampToValueAtTime(20,t+0.5);
+            const sg=ctx.createGain(); sg.gain.setValueAtTime(0.6,t); sg.gain.exponentialRampToValueAtTime(0.001,t+0.55);
+            sub.connect(sg); sg.connect(out); sub.start(t); sub.stop(t+0.6);
+            // Uzun yankı
+            const echo=ctx.createOscillator(); echo.type='sine'; echo.frequency.value=180;
+            const eg=ctx.createGain(); eg.gain.setValueAtTime(0.07,t+0.3); eg.gain.exponentialRampToValueAtTime(0.001,t+1.4);
+            echo.connect(eg); eg.connect(out); echo.start(t+0.3); echo.stop(t+1.5);
+        }
+        // Muzzle flash
+        sniperMuzzle.material.opacity = 1; GAME.shakeTime = 0.08;
+        setTimeout(()=>sniperMuzzle.material.opacity=0, 60);
+        // Raycast — uzun menzil hedefleme
+        raycaster.setFromCamera(new THREE.Vector2(0,0), camera);
+        const hits = raycaster.intersectObjects(enemies);
+        if(hits.length > 0) {
+            const e = hits[0].object;
+            if(e.hp !== undefined) {
+                e.hp -= 85; // yüksek hasar
+                if(e.hp <= 0) { const dp=e.position.clone(); scene.remove(e); const idx=enemies.indexOf(e); if(idx>-1){enemies.splice(idx,1);} onEnemyKilled(dp); }
+            }
+        }
+    }
+
+    // ================================================================
+    // DÜŞME HASARI
+    // ================================================================
+    function handleFallDamage(landY) {
+        if(GAME._fallFromY === null) return;
+        const fallHeight = GAME._fallFromY - landY;
+        GAME._fallFromY = null;
+        if(fallHeight < 5) return; // 5m altında hasar yok
+        if(GAME.timeScale < 1.0) { showLootMessage('⏱ ZAMAN YAVAŞ — HASAR YOK', '#00ffff'); return; } // bullet time korur
+        const dmg = Math.min(90, Math.floor((fallHeight - 4) * 6));
+        GAME.playerHealth -= dmg;
+        GAME.shakeTime = 0.3;
+        let healthBar = document.getElementById('health-bar'); if(healthBar) healthBar.style.width = Math.max(0,GAME.playerHealth)+'%';
+        showLootMessage(`▼ DÜŞME HASARI: -${dmg} SB`, '#ff4400');
+        const dmgEl = document.getElementById('damage-overlay'); if(dmgEl){dmgEl.style.opacity=0.7; setTimeout(()=>dmgEl.style.opacity=0,300);}
+        if(GAME.playerHealth <= 0) { GAME.playerHealth=0; showLootMessage('☠ SİSTEM ÇÖKTÜ', '#ff0000'); }
+    }
 
     function toggleMode() {
         if(GAME.isPaused || GAME.metroRiding) return; GAME.isShooting = false; 
@@ -3846,11 +4324,15 @@ window.onload = function() {
                     const cabOffset = new THREE.Vector3(0, 1.82, -1.15).applyAxisAngle(new THREE.Vector3(0,1,0), cv.rotation.y);
                     camera.position.copy(cv.position).add(cabOffset);
                     vehicleCockpit.position.copy(cv.position).add(cabOffset);
-                    // Drift eğimi: direksiyon sallanması
+                    // Drift eğimi
                     const _driftTilt = (GAME._driftAngle || 0) * -0.18;
                     vehicleCockpit.rotation.set(0, cv.rotation.y, _driftTilt);
-                    // Sarsıntı (çarpma)
-                    if(GAME.shakeTime > 0) { camera.position.x += (Math.random()-0.5)*0.35; camera.position.y += (Math.random()-0.5)*0.35; }
+                    // Sarsıntı (çarpma) — shakeTime burada da azalır, sonsuza gitmez
+                    if(GAME.shakeTime > 0) {
+                        camera.position.x += (Math.random()-0.5)*0.35;
+                        camera.position.y += (Math.random()-0.5)*0.35;
+                        GAME.shakeTime -= dt;
+                    }
                 } 
                 else { let camTarget = new THREE.Vector3(cv.position.x, 60, cv.position.z + 40); camera.position.lerp(camTarget, 0.1); camera.lookAt(cv.position);
                     if(isWorldHostile() && enemies.length > 0 && Math.random() < 0.08 * GAME.timeScale) {
@@ -3872,7 +4354,14 @@ window.onload = function() {
                 if(GAME.wantedLevel > 0) { GAME.wantedLevel -= (dt * 0.05); if(GAME.wantedLevel < 0.05) { GAME.wantedLevel = 0; GAME.combatProvoked = false; } updateWantedUI(); }
                 for(let i = visualBeams.length - 1; i >= 0; i--) { visualBeams[i].life -= dt; if(visualBeams[i].life <= 0) { scene.remove(visualBeams[i].mesh); visualBeams.splice(i, 1); } }
                 if(gunGroup.position.z > 0) { gunGroup.position.z -= dt * 2.0; if(gunGroup.position.z < 0) gunGroup.position.z = 0; }
-                if(GAME.mode === 'FPS' && GAME.isShooting && (now - GAME.lastShot > 150)) { let dir = new THREE.Vector3(0, 0, -1).applyQuaternion(camera.quaternion); shoot(camera.position.clone(), dir, true); GAME.lastShot = now; }
+                if(GAME.mode === 'FPS' && GAME.isShooting && !GAME.isDriving) {
+                    if(GAME.weaponSlot === 2 && GAME.onRooftop) {
+                        // Keskin nişancı: tık başına ateş (isShooting kenar)
+                        if(now - GAME.lastShot > 1800) { sniperShoot(); GAME.lastShot = now; }
+                    } else if(GAME.weaponSlot === 1) {
+                        if(now - GAME.lastShot > 150) { let dir = new THREE.Vector3(0, 0, -1).applyQuaternion(camera.quaternion); shoot(camera.position.clone(), dir, true); GAME.lastShot = now; }
+                    }
+                }
                 if (GAME.mode === 'RTS') {
                     const dist = playerMesh.position.distanceTo(playerTargetPos);
                     if (dist > 0.5) { _vDir.subVectors(playerTargetPos, playerMesh.position); _vDir.y = 0; if(_vDir.lengthSq() > 0) { _vDir.normalize(); playerMesh.position.add(_vDir.multiplyScalar(speed)); playerMesh.lookAt(playerTargetPos); } if(checkCollision(playerMesh.position, playerRadius)) { playerMesh.position.copy(oldPos); playerTargetPos.copy(oldPos); } }
@@ -3945,21 +4434,63 @@ window.onload = function() {
                         }
                     }
 
-                    // 2) Zemin Y'yi belirle
+                    // 2) Zemin Y'yi belirle — araç tavanı / bina çatısı / ana zemin
+                    const _px = playerMesh.position.x;
+                    const _pz = playerMesh.position.z;
+                    const _py = playerMesh.position.y;
+                    let bestGroundY = 0.2; // varsayılan: ana zemin
+
                     if(onVehicle) {
-                        GAME.groundY = vehicleRoofY;
+                        bestGroundY = vehicleRoofY;
                     } else {
-                        GAME.groundY = 0.2; // normal zemin
+                        // Tüm bina çatılarını tara
+                        for(let b of buildings) {
+                            const hw = b.w * 0.5 + 0.35;
+                            const hd = b.d * 0.5 + 0.35;
+                            if(_px > b.x - hw && _px < b.x + hw &&
+                               _pz > b.z - hd && _pz < b.z + hd) {
+                                const roofY = b.h + 0.2;
+                                // Çatı oyuncunun altında ya da iniş toleransı içinde (2.5 birim)
+                                if(roofY <= _py + 2.5 && roofY > bestGroundY) {
+                                    bestGroundY = roofY;
+                                }
+                            }
+                        }
+                    }
+                    GAME.groundY = bestGroundY;
+
+                    // onRooftop durumunu groundY'den otomatik türet
+                    const _onBuilding = bestGroundY > 1.5 && !onVehicle;
+                    if(_onBuilding) {
+                        GAME.onRooftop = true;
+                        GAME.rooftopY  = bestGroundY - 0.2;
+                    } else if(GAME.onRooftop && !_onBuilding && _py <= 1.8) {
+                        // Ana zemine indi — teras modunu kapat
+                        GAME.onRooftop = false;
+                        GAME.rooftopBuilding = null;
+                        if(GAME.weaponSlot === 2) {
+                            GAME.weaponSlot = 1;
+                            updateWeaponVisuals();
+                            showLootMessage('▼ TERASI TERK ETTİN', '#ffaa00');
+                        }
                     }
 
                     // 3) Zemin çarpışma çözümü
                     if(playerMesh.position.y <= GAME.groundY) {
+                        // Düşme hasarı — havada iken zemine değdi
+                        if(!GAME.isGrounded && !GAME._lastGrounded) {
+                            handleFallDamage(GAME.groundY);
+                        }
                         playerMesh.position.y = GAME.groundY;
                         GAME.velocityY  = 0;
                         GAME.isGrounded = true;
+                        GAME._fallFromY = null;
                     } else {
+                        // Havadayken başlangıç yüksekliğini kaydet
+                        if(GAME.isGrounded) { GAME._fallFromY = playerMesh.position.y; }
                         GAME.isGrounded = false;
                     }
+                    GAME._lastGrounded = GAME.isGrounded;
 
                     // Kamera
                     camera.position.copy(playerMesh.position); camera.position.y += 0.6;
@@ -3990,6 +4521,22 @@ window.onload = function() {
                 if(GAME.wantedLevel >= 2.5 && !_wantedMusicActive) startWantedMusic();
                 else if(GAME.wantedLevel < 1.5 && _wantedMusicActive) stopWantedMusic();
             }
+            // TAKSİ MİSYON güncelle
+            if(GAME.taxiActive) updateTaxiMission(gameDt, now);
+            else if(GAME.isDriving && GAME.currentVehicle !== taxiCar && GAME.taxiActive) cancelTaxiMission();
+            // BİNA GİRİŞ YAKLAŞIM PROMPT
+            if(!GAME.isDriving && !GAME.metroRiding) {
+                let nearEntry = null;
+                for(let entry of buildingEntries) {
+                    if(playerMesh.position.distanceTo(entry.entryPos) < 5.5) { nearEntry=entry; break; }
+                }
+                const btnInt = document.getElementById('btn-interact');
+                if(nearEntry && btnInt) { btnInt.innerText = `BİNAYA GİR [G] — TERAS ${nearEntry.rooftopY.toFixed(0)}m`; btnInt.style.display='block'; }
+            }
+            // Sniper soğuma süresi
+            if(_sniperCooldown > 0) _sniperCooldown -= gameDt;
+            // Silah görselleri (mod değişince güncelle)
+            updateWeaponVisuals();
 
             for(let i = lootDrops.length - 1; i >= 0; i--) {
                 let l = lootDrops[i]; l.rotation.y += gameDt * 2; l.life -= gameDt;
