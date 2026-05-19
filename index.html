@@ -343,19 +343,16 @@
 
         /* --- TAKSİ YÖN OKU --- */
         #taxi-arrow {
-            display: none; position: fixed; top: 48px; left: 50%; transform: translateX(-50%);
+            display: none; position: fixed; top: 44px; left: 50%; transform: translateX(-50%);
             z-index: 110; text-align: center; pointer-events: none; user-select: none;
         }
-        #taxi-arrow-icon {
-            font-size: 36px; color: #ffd700; text-shadow: 0 0 18px #ffd700, 0 0 6px #fff;
-            display: block; transition: transform 0.1s linear; line-height: 1;
-        }
         #taxi-arrow-dest {
-            font-family: 'Share Tech Mono', monospace; font-size: 11px;
-            color: #ffe066; letter-spacing: 1px; text-shadow: 0 0 8px #ffd700;
+            font-family: 'Share Tech Mono', monospace; font-size: 12px;
+            color: #ffe066; letter-spacing: 2px; text-shadow: 0 0 8px #ffd700;
+            margin-top: 3px;
         }
-
-        /* --- SNIPER DÜRBÜN --- */
+        @keyframes taxi-bounce { 0%,100%{transform:translateX(-50%) translateY(0px);} 50%{transform:translateX(-50%) translateY(-5px);} }
+        #taxi-arrow { animation: taxi-bounce 1.1s ease-in-out infinite; }
         #sniper-scope {
             display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%;
             z-index: 95; pointer-events: none;
@@ -419,9 +416,15 @@
         <div class="tx-trips" id="taxi-trips">SEYAHAT: 0</div>
     </div>
 
-    <!-- TAKSİ YÖN OKU -->
+    <!-- TAKSİ YÖN OKU — SVG tabanlı gerçek ok -->
     <div id="taxi-arrow">
-        <span id="taxi-arrow-icon">▲</span>
+        <svg id="taxi-arrow-svg" width="72" height="72" viewBox="-36 -36 72 72"
+             style="display:block;filter:drop-shadow(0 0 10px #ffd700) drop-shadow(0 0 4px #fff8a0);">
+            <!-- Ok: varsayılan yön yukarı (0°), döndürülerek hedef gösterilir -->
+            <path id="taxi-arrow-path"
+                d="M 0,-30 L 13,-8 L 6,-8 L 6,22 L -6,22 L -6,-8 L -13,-8 Z"
+                fill="#ffd700" stroke="#fffbe0" stroke-width="1.2" stroke-linejoin="round"/>
+        </svg>
         <div id="taxi-arrow-dest">-- m</div>
     </div>
 
@@ -4006,31 +4009,54 @@ window.onload = function() {
     }
 
     function updateTaxiArrow(playerPos) {
-        const arrowEl = document.getElementById('taxi-arrow');
-        const arrowIcon = document.getElementById('taxi-arrow-icon');
-        const arrowDist = document.getElementById('taxi-arrow-dest');
-        if(!arrowEl) return;
+        const arrowEl  = document.getElementById('taxi-arrow');
+        const arrowSvg = document.getElementById('taxi-arrow-svg');
+        const arrowPath= document.getElementById('taxi-arrow-path');
+        const arrowDist= document.getElementById('taxi-arrow-dest');
+        if(!arrowEl || !arrowSvg) return;
 
         let target = null;
         if(GAME.taxiPhase === 'find_passenger' && GAME.taxiPassengerPos) target = GAME.taxiPassengerPos;
-        else if(GAME.taxiPhase === 'carrying' && GAME.taxiDestPos) target = GAME.taxiDestPos;
+        else if(GAME.taxiPhase === 'carrying' && GAME.taxiDestPos)        target = GAME.taxiDestPos;
 
-        if(!target) { arrowEl.style.display='none'; return; }
+        if(!target) { arrowEl.style.display = 'none'; return; }
         arrowEl.style.display = 'block';
 
         const dx = target.x - playerPos.x;
         const dz = target.z - playerPos.z;
-        const worldAngle = Math.atan2(dx, -dz); // world azimuth
-        const playerAngle = GAME.isDriving && GAME.currentVehicle ? GAME.currentVehicle.rotation.y : (camera.rotation.y || 0);
-        const relAngle = worldAngle - playerAngle;
-        const deg = relAngle * (180/Math.PI);
-        arrowIcon.style.transform = `rotate(${deg}deg)`;
-        const dist = Math.round(Math.sqrt(dx*dx+dz*dz));
-        arrowDist.innerText = dist + 'm';
-        // Renk: yaklaştıkça yeşile döner
+        const dist = Math.round(Math.sqrt(dx * dx + dz * dz));
+
+        let deg;
+
+        if(GAME.mode === 'RTS') {
+            // RTS: kamera sabit tepeden bakıyor, hiç yatay dönmüyor.
+            // Ekranın yukarısı = dünya -Z yönü, sağı = dünya +X yönü.
+            // Doğrudan dünya uzayı açısı kullan.
+            const forwardComp = -dz; // ekran yukarısı ↔ -Z
+            const rightComp   =  dx; // ekran sağı    ↔ +X
+            deg = Math.atan2(rightComp, forwardComp) * (180 / Math.PI);
+        } else {
+            // FPS / Araç: oyuncunun baktığı yönü Three.js yerel eksenlerine yansıt
+            const θ = (GAME.isDriving && GAME.currentVehicle)
+                ? GAME.currentVehicle.rotation.y
+                : (camera.rotation.y || 0);
+
+            // Three.js: ileri = (-sinθ, 0, -cosθ) | sağ = (cosθ, 0, -sinθ)
+            const fwdX = -Math.sin(θ),  fwdZ = -Math.cos(θ);
+            const rgtX =  Math.cos(θ),  rgtZ = -Math.sin(θ);
+
+            const forwardComp = dx * fwdX + dz * fwdZ;
+            const rightComp   = dx * rgtX + dz * rgtZ;
+            deg = Math.atan2(rightComp, forwardComp) * (180 / Math.PI);
+        }
+
+        arrowSvg.style.transform = `rotate(${deg}deg)`;
+
         const col = dist < 15 ? '#00ff88' : '#ffd700';
-        arrowIcon.style.color = col;
-        arrowIcon.style.textShadow = `0 0 18px ${col}`;
+        if(arrowPath) arrowPath.setAttribute('fill', col);
+        arrowSvg.style.filter = `drop-shadow(0 0 12px ${col}) drop-shadow(0 0 4px #fffbe0)`;
+        arrowDist.innerText = dist + 'm';
+        arrowDist.style.color = col;
     }
 
     // ================================================================
