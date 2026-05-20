@@ -437,8 +437,29 @@
         <div class="wh-slot" id="wh-2">[2] KESKİN NİŞANCİ</div>
     </div>
 
-    <!-- TERAS MESAJ -->
-    <div id="rooftop-msg">▲ TERAS ERİŞİMİ SAĞLANDI<br><span style="font-size:13px;color:#88ffcc">KESKİN NİŞANCİ TÜFEĞİ VERİLDİ</span></div>
+    <!-- ÖLÜM EKRANI -->
+    <div id="death-screen" style="display:none;position:fixed;top:0;left:0;width:100%;height:100%;z-index:999;pointer-events:none;">
+        <!-- Siyah örtü -->
+        <div id="death-black" style="position:absolute;inset:0;background:#000;opacity:0;transition:opacity 0.4s;"></div>
+        <!-- CRT kırmızı scanline -->
+        <div id="death-scanlines" style="position:absolute;inset:0;opacity:0;transition:opacity 0.3s;
+            background:repeating-linear-gradient(0deg,transparent,transparent 3px,rgba(255,0,40,0.18) 3px,rgba(255,0,40,0.18) 4px);"></div>
+        <!-- Yazı -->
+        <div id="death-text" style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);
+            text-align:center;opacity:0;transition:opacity 0.6s;pointer-events:none;">
+            <div style="font-family:'Share Tech Mono',monospace;color:#ff0033;font-size:28px;
+                letter-spacing:4px;text-shadow:0 0 30px #ff0033,0 0 10px #ff4455;margin-bottom:16px;">
+                ☠ ÖLDÜN
+            </div>
+            <div style="font-family:'Share Tech Mono',monospace;color:#cc2233;font-size:14px;
+                letter-spacing:2px;line-height:2;text-shadow:0 0 12px #ff0033;">
+                Bu şehir merhametli değil.<br>
+                Yedek bilinç paketi yükleniyor<span id="death-dots">...</span>
+            </div>
+        </div>
+    </div>
+    <!-- GLITCH CANVAS -->
+    <canvas id="glitch-canvas" style="display:none;position:fixed;top:0;left:0;width:100%;height:100%;z-index:998;pointer-events:none;opacity:0.85;"></canvas>▲ TERAS ERİŞİMİ SAĞLANDI<br><span style="font-size:13px;color:#88ffcc">KESKİN NİŞANCİ TÜFEĞİ VERİLDİ</span></div>
     <div id="bounty-hud">
         <div class="bh-title">▶ AKTİF KONTRAT: SUİKAST</div>
         <div class="bh-target" id="bh-target-desc">Hedef tanımlanıyor...</div>
@@ -1105,7 +1126,7 @@ window.onload = function() {
         mode: 'RTS', score: 0, isMobile: ('ontouchstart' in window) || (navigator.maxTouchPoints > 0),
         timeScale: 1.0, keys: { w: false, a: false, s: false, d: false, shift: false, g: false, ' ': false },
         moveJoy: { x: 0, y: 0 }, isShooting: false, lastTime: Date.now(),
-        playerHealth: 100, shakeTime: 0, lastShot: 0, contractIndex: -1, currentKills: 0, isPaused: false,
+        playerHealth: 350, shakeTime: 0, lastShot: 0, contractIndex: -1, currentKills: 0, isPaused: false,
         wantedLevel: 0, combatProvoked: false, isDashing: false, dashTimer: 0, dashCooldown: 0,
         isDriving: false, currentVehicle: null, carSpeedRaw: 0,
         metroRiding: false, metroTrain: null, metroLastStation: null, metroLookYaw: 0, metroLookPitch: 0,
@@ -1455,8 +1476,8 @@ window.onload = function() {
     // Zemin: metalness düşük, roughness yüksek — asfalt parlamamalı
     // emissive: gece zemin tamamen kararmayı önleyen çok düşük bir taban ışık
     const roadMat = new THREE.MeshStandardMaterial({ 
-        map: roadTex, color: 0x888888, roughness: 0.48, metalness: 0.18,
-        emissive: new THREE.Color(0.012, 0.018, 0.025),  // çok düşük mavi-cyan zemin parıltısı
+        map: roadTex, color: 0x888888, roughness: 0.97, metalness: 0.0,
+        emissive: new THREE.Color(0.012, 0.018, 0.025),
         emissiveIntensity: 1.0
     });
     const cityFloor = new THREE.Mesh(new THREE.PlaneGeometry(600, 600), roadMat); cityFloor.rotation.x = -Math.PI / 2; cityFloor.position.y = -1; worldGroup.add(cityFloor); floorMeshes.push(cityFloor);
@@ -1751,7 +1772,7 @@ window.onload = function() {
     islandWater.rotation.x = -Math.PI / 2; islandWater.position.set(80, -1.12, 0); worldGroup.add(islandWater);
     cityLife.oceanPieces.push(islandWater);
 
-    const quayMat = new THREE.MeshStandardMaterial({ color: 0x181a20, roughness: 0.82, metalness: 0.35, emissive: new THREE.Color(0.015,0.025,0.035) });
+    const quayMat = new THREE.MeshStandardMaterial({ color: 0x181a20, roughness: 0.96, metalness: 0.0, emissive: new THREE.Color(0.015,0.025,0.035) });
     const quayGlowMat = new THREE.MeshBasicMaterial({ color: new THREE.Color(0, 1.6, 1.8), transparent: true, opacity: 0.42, blending: THREE.AdditiveBlending });
     function addQuay(x, z, w, d) {
         const q = new THREE.Mesh(new THREE.PlaneGeometry(w, d), quayMat);
@@ -1769,7 +1790,7 @@ window.onload = function() {
         const islandMat = new THREE.MeshStandardMaterial({ color: 0x171817, roughness: 0.95, metalness: 0.08, emissive: new THREE.Color(0.01,0.015,0.02) });
         const farIsland = new THREE.Mesh(new THREE.CylinderGeometry(95, 130, 5, 18), islandMat);
         farIsland.position.set(-160, -2.7, -650); farIsland.scale.z = 0.62; scene.add(farIsland);
-        const bridgeDeckMat = new THREE.MeshStandardMaterial({ color: 0x1c1f28, roughness: 0.55, metalness: 0.55 });
+        const bridgeDeckMat = new THREE.MeshStandardMaterial({ color: 0x1c1f28, roughness: 0.95, metalness: 0.02 });
         const bridgeLightMat = new THREE.MeshBasicMaterial({ color: new THREE.Color(0,2.2,3), transparent:true, opacity:0.7, blending:THREE.AdditiveBlending });
         const farBridge = new THREE.Mesh(new THREE.BoxGeometry(18, 0.5, 260), bridgeDeckMat);
         farBridge.position.set(0, -0.72, -470); worldGroup.add(farBridge);
@@ -2942,8 +2963,8 @@ window.onload = function() {
             cityLife.rainLines.forEach(line => { line.visible = false; });
             setRainAmbient(0);
         }
-        roadMat.roughness = 0.50 - wetBoost * 0.23;
-        roadMat.metalness = 0.14 + wetBoost * 0.24;
+        roadMat.roughness = Math.max(0.82, 0.97 - wetBoost * 0.12);
+        roadMat.metalness = 0.0; // speküler parlama yok — ıslak görünüm puddle mesh'lerinden gelir
         cityLife.wetSurfaces.forEach((m, i) => {
             m.material.opacity = 0.035 + wetBoost * (0.08 + (Math.sin(now*0.003 + i) * 0.015));
         });
@@ -4167,21 +4188,145 @@ window.onload = function() {
     }
 
     // ================================================================
-    // DÜŞME HASARI
+    // ÖLÜM SEKANSII — CRT Glitch + Ses Kesintisi + Fade
     // ================================================================
+    let _deathInProgress = false;
+
+    function triggerDeathSequence() {
+        if(_deathInProgress) return;
+        _deathInProgress = true;
+        GAME.playerHealth = 0;
+        GAME.isPaused = true;
+
+        const deathScreen = document.getElementById('death-screen');
+        const deathBlack  = document.getElementById('death-black');
+        const deathScans  = document.getElementById('death-scanlines');
+        const deathText   = document.getElementById('death-text');
+        const glitchCanvas= document.getElementById('glitch-canvas');
+        deathScreen.style.display = 'block';
+
+        // --- FAZI 1 (0-600ms): CRT Glitch ---
+        glitchCanvas.style.display = 'block';
+        const ctx2d = glitchCanvas.getContext('2d');
+        glitchCanvas.width  = window.innerWidth;
+        glitchCanvas.height = window.innerHeight;
+
+        let glitchFrame = 0;
+        const glitchInterval = setInterval(() => {
+            ctx2d.clearRect(0, 0, glitchCanvas.width, glitchCanvas.height);
+            const lines = 18 + Math.floor(Math.random() * 14);
+            for(let i = 0; i < lines; i++) {
+                const y   = Math.random() * glitchCanvas.height;
+                const h   = 2 + Math.random() * 12;
+                const off = (Math.random() - 0.5) * 80;
+                const col = Math.random() > 0.5 ? 'rgba(255,0,40,0.55)' : 'rgba(0,255,200,0.35)';
+                ctx2d.fillStyle = col;
+                ctx2d.fillRect(off, y, glitchCanvas.width, h);
+            }
+            // HUD elementlerini de salla
+            const hudEls = document.querySelectorAll('.cyber-panel, #health-bar, #objective-tracker');
+            hudEls.forEach(el => {
+                el.style.transform = `translateX(${(Math.random()-0.5)*14}px)`;
+                el.style.filter = Math.random() > 0.4
+                    ? `hue-rotate(${Math.random()*360}deg) brightness(2)`
+                    : '';
+            });
+            glitchFrame++;
+            if(glitchFrame > 10) { clearInterval(glitchInterval); _resetHudGlitch(); }
+        }, 55);
+
+        // --- FAZI 2 (300ms): Ses "vvvvttt" kesintisi ---
+        setTimeout(() => {
+            if(audioCtxSFX) {
+                const ctx = audioCtxSFX; const t = ctx.currentTime;
+                const out = _sfxGain || ctx.destination;
+                // Sinyal gürültüsü + dropout
+                const noiseOsc = ctx.createOscillator(); noiseOsc.type = 'sawtooth'; noiseOsc.frequency.setValueAtTime(80, t); noiseOsc.frequency.exponentialRampToValueAtTime(30, t+0.4);
+                const noiseG = ctx.createGain(); noiseG.gain.setValueAtTime(0.5, t); noiseG.gain.setValueAtTime(0.5, t+0.1); noiseG.gain.setValueAtTime(0.0001, t+0.12); noiseG.gain.setValueAtTime(0.4, t+0.13); noiseG.gain.setValueAtTime(0.0001, t+0.16); noiseG.gain.setValueAtTime(0.3, t+0.17); noiseG.gain.exponentialRampToValueAtTime(0.0001, t+0.5);
+                const noiseF = ctx.createBiquadFilter(); noiseF.type = 'bandpass'; noiseF.frequency.value = 400; noiseF.Q.value = 0.3;
+                noiseOsc.connect(noiseF); noiseF.connect(noiseG); noiseG.connect(out);
+                noiseOsc.start(t); noiseOsc.stop(t+0.55);
+                // Müzik ve ambians kıs
+                if(_musicGain)   _musicGain.gain.setTargetAtTime(0.0001, t+0.1, 0.2);
+                if(_ambienceGain)_ambienceGain.gain.setTargetAtTime(0.0001, t+0.1, 0.25);
+            }
+        }, 300);
+
+        // --- FAZI 3 (700ms): Siyaha düş ---
+        setTimeout(() => {
+            ctx2d.clearRect(0, 0, glitchCanvas.width, glitchCanvas.height);
+            glitchCanvas.style.display = 'none';
+            deathBlack.style.opacity = '1';
+            deathScans.style.opacity = '1';
+        }, 700);
+
+        // --- FAZI 4 (1300ms): Yazı çıkar ---
+        setTimeout(() => {
+            deathText.style.opacity = '1';
+            // Dots animasyonu
+            let dotCount = 0;
+            const dotEl = document.getElementById('death-dots');
+            const dotInterval = setInterval(() => {
+                dotCount = (dotCount + 1) % 4;
+                if(dotEl) dotEl.innerText = '.'.repeat(dotCount) || '   ';
+            }, 400);
+            setTimeout(() => clearInterval(dotInterval), 3500);
+        }, 1300);
+
+        // --- FAZI 5 (4500ms): Yeniden doğ ---
+        setTimeout(() => {
+            deathText.style.opacity = '0';
+            deathScans.style.opacity = '0';
+            setTimeout(() => {
+                deathBlack.style.opacity = '0';
+                setTimeout(() => {
+                    deathScreen.style.display = 'none';
+                    _respawnPlayer();
+                }, 500);
+            }, 400);
+        }, 4800);
+    }
+
+    function _resetHudGlitch() {
+        document.querySelectorAll('.cyber-panel, #health-bar, #objective-tracker').forEach(el => {
+            el.style.transform = ''; el.style.filter = '';
+        });
+    }
+
+    function _respawnPlayer() {
+        _deathInProgress = false;
+        GAME.playerHealth = 350;
+        GAME.wantedLevel  = 0;
+        GAME.isPaused     = false;
+        playerMesh.position.set(0, 0.2, 0);
+        playerTargetPos.set(0, 0.2, 0);
+        GAME.velocityY    = 0;
+        GAME.isGrounded   = true;
+        if(GAME.isDriving) {
+            GAME.isDriving = false;
+            if(GAME.currentVehicle) { GAME.currentVehicle.isPlayerDriven = false; GAME.currentVehicle.speed = 0; GAME.currentVehicle = null; }
+        }
+        let healthBar = document.getElementById('health-bar');
+        if(healthBar) healthBar.style.width = '100%';
+        updateWantedUI();
+        // Müzik geri aç
+        if(audioCtxSFX && _musicGain)    _musicGain.gain.setTargetAtTime(0.65, audioCtxSFX.currentTime, 1.0);
+        if(audioCtxSFX && _ambienceGain) _ambienceGain.gain.setTargetAtTime(0.5,  audioCtxSFX.currentTime, 1.2);
+        showLootMessage('◉ BİLİNÇ PAKETİ YÜKLENDİ — SİSTEM AKTİF', '#00ffcc');
+    }
     function handleFallDamage(landY) {
         if(GAME._fallFromY === null) return;
         const fallHeight = GAME._fallFromY - landY;
         GAME._fallFromY = null;
         if(fallHeight < 5) return; // 5m altında hasar yok
         if(GAME.timeScale < 1.0) { showLootMessage('⏱ ZAMAN YAVAŞ — HASAR YOK', '#00ffff'); return; } // bullet time korur
-        const dmg = Math.min(90, Math.floor((fallHeight - 4) * 6));
+        const dmg = Math.min(120, Math.floor((fallHeight - 4) * 6));
         GAME.playerHealth -= dmg;
         GAME.shakeTime = 0.3;
-        let healthBar = document.getElementById('health-bar'); if(healthBar) healthBar.style.width = Math.max(0,GAME.playerHealth)+'%';
+        let healthBar = document.getElementById('health-bar'); if(healthBar) healthBar.style.width = Math.max(0, GAME.playerHealth/350*100)+'%';
         showLootMessage(`▼ DÜŞME HASARI: -${dmg} SB`, '#ff4400');
         const dmgEl = document.getElementById('damage-overlay'); if(dmgEl){dmgEl.style.opacity=0.7; setTimeout(()=>dmgEl.style.opacity=0,300);}
-        if(GAME.playerHealth <= 0) { GAME.playerHealth=0; showLootMessage('☠ SİSTEM ÇÖKTÜ', '#ff0000'); }
+        if(GAME.playerHealth <= 0) { GAME.playerHealth=0; triggerDeathSequence(); }
     }
 
     function toggleMode() {
@@ -4568,7 +4713,7 @@ window.onload = function() {
                 let l = lootDrops[i]; l.rotation.y += gameDt * 2; l.life -= gameDt;
                 if(l.position.distanceTo(playerMesh.position) < 2.0) {
                     playLootSFX();
-                    if(l.lootType === 'health') { GAME.playerHealth = Math.min(100, GAME.playerHealth + 30); let healthBar = document.getElementById('health-bar'); if(healthBar) healthBar.style.width = Math.max(0, GAME.playerHealth) + '%'; showLootMessage("+ SAĞLIK YENİLENDİ", "#0f0"); } 
+                    if(l.lootType === 'health') { GAME.playerHealth = Math.min(350, GAME.playerHealth + 80); let healthBar = document.getElementById('health-bar'); if(healthBar) healthBar.style.width = Math.max(0, GAME.playerHealth/350*100) + '%'; showLootMessage("+ BİLİNÇ PAKETİ YENİLENDİ", "#0f0"); } 
                     else { GAME.score += 200; if(scoreDisplay) scoreDisplay.innerText = GAME.score.toString().padStart(4, '0'); showLootMessage("+ KREDİ VERİSİ", "#fc0"); }
                     scene.remove(l); lootDrops.splice(i, 1); continue;
                 }
@@ -4650,10 +4795,10 @@ window.onload = function() {
                         }
                     } else {
                         if(p.position.distanceTo(playerMesh.position) < (GAME.isDriving ? 3.0 : 1.5)) {
-                            GAME.playerHealth -= (GAME.wantedLevel > 3 ? 15 : 10); 
-                            let healthBar = document.getElementById('health-bar'); if(healthBar) healthBar.style.width = Math.max(0, GAME.playerHealth) + '%';
+                            GAME.playerHealth -= (GAME.wantedLevel > 3 ? 18 : 12); 
+                            let healthBar = document.getElementById('health-bar'); if(healthBar) healthBar.style.width = Math.max(0, GAME.playerHealth/350*100) + '%';
                             let dmgOverlay = document.getElementById('damage-overlay'); if(dmgOverlay) { dmgOverlay.style.opacity = 1; setTimeout(() => dmgOverlay.style.opacity = 0, 150); }
-                            hit = true; if(GAME.playerHealth <= 0) { alert("SİSTEM ÇÖKTÜ."); location.reload(); }
+                            hit = true; if(GAME.playerHealth <= 0) { triggerDeathSequence(); }
                         }
                     }
                 }
