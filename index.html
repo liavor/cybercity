@@ -201,19 +201,6 @@
         #dash-overlay { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0, 255, 255, 0.05); box-shadow: inset 0 0 100px rgba(0,255,255,0.15); opacity: 0; transition: opacity 0.1s; pointer-events: none; z-index: 4; }
 
         /* Şehir Olayı Bildirimi */
-        #city-event-banner {
-            position: absolute; bottom: 160px; left: 50%; transform: translateX(-50%);
-            background: rgba(5,0,15,0.88); backdrop-filter: blur(10px);
-            border: 1px solid rgba(255,60,200,0.4); border-left: 3px solid #ff3cc8;
-            color: #ff88ee; padding: 12px 22px; z-index: 65; display: none;
-            font-family: 'Share Tech Mono', monospace; font-size: 13px; letter-spacing: 1px;
-            box-shadow: 0 0 25px rgba(255,60,200,0.15); text-align: center; pointer-events: auto;
-        }
-        #city-event-banner .ceb-title { color: #ff3cc8; font-size: 10px; letter-spacing: 3px; margin-bottom: 4px; }
-        #city-event-banner .ceb-actions { margin-top: 10px; display: flex; gap: 10px; justify-content: center; }
-        .ceb-btn { padding: 7px 16px; font-size: 12px; font-family: 'Share Tech Mono', monospace; cursor: pointer; border: 1px solid; letter-spacing: 1px; background: transparent; transition: all 0.2s; }
-        .ceb-btn.intervene { color: #ff3cc8; border-color: #ff3cc8; } .ceb-btn.intervene:hover { background: rgba(255,60,200,0.2); }
-        .ceb-btn.ignore    { color: #556677; border-color: #334455; } .ceb-btn.ignore:hover { background: rgba(0,50,80,0.3); }
 
         /* Araç Modifikasyon Menüsü */
         #upgrade-menu {
@@ -484,14 +471,7 @@
     </div>
 
     <!-- ŞEHİR OLAYI BANNER -->
-    <div id="city-event-banner">
-        <div class="ceb-title">▶ ŞEHİR OLAYI TESPİT EDİLDİ</div>
-        <div id="ceb-desc">Siber Banka Soygunu Devam Ediyor</div>
-        <div class="ceb-actions">
-            <button class="ceb-btn intervene" id="ceb-intervene">[ MÜDAHALE ET ]</button>
-            <button class="ceb-btn ignore" id="ceb-ignore">[ GÖZ YUMU ]</button>
-        </div>
-    </div>
+    <!-- city-event-banner kaldırıldı -->
 
     <!-- ARAÇ YÜKSELTMELERİ -->
     <div id="upgrade-menu">
@@ -1095,31 +1075,51 @@ window.onload = function() {
         { 
             sender: "Hayalet_Komisyon", title: "// GİZLİ SUİKAST //",
             text: "Endüstri bölgesinde bir hedef dolaşıyor. Yanından geçen kalabalık onun kalkanı. Sabrın ve tetik disiplinin test edilecek. Tek kurşun, tek hedef. Sıfır yan kayıp.",
-            target: 1,
-            type: 'bounty',
-            reward: 1500,
+            target: 1, type: 'bounty', reward: 1500,
             clue: "KIRMIZI CEKETLİ, ENDÜSTRİ BÖLGESİ",
-            clueDetail: "Endüstri bölgesinde (kuzeyde) kırmızı-turuncu renkte bir sivil gibi görünen hedef. Etrafındaki sivillere zarar verme."
+            clueDetail: "Endüstri bölgesinde (kuzeyde) KIRMIZI-TURUNCU renkte yavaş yürüyen hedef. Etrafındaki sivillere zarar verme.",
+            targetColor: 0xff2200, targetZone: 'industrial', targetEmissive: new THREE.Color(2.2, 0.1, 0)
         },
         { sender: "Kızıl Devre", title: "Kanlı Çipler", text: "Kaldırımdaki serserileri hallet. Araçla ezmek de serbest!", target: 12 },
         { 
             sender: "Kuro_Shinigami", title: "// ELİT İMHA //",
             text: "Plaza bölgesinde korumalı biri geziniyor. Cebi dolu, kalabalığın içinde saklı. Sadece o. Bir tane fazla kurşun tüm ödemeyi siler.",
-            target: 1,
-            type: 'bounty',
-            reward: 2500,
+            target: 1, type: 'bounty', reward: 2500,
             clue: "MAVİ TAKİM ELBİSELİ, PLAZA BÖLGESİ",
-            clueDetail: "Plaza bölgesinde (güneyde) parlak mavi renkte bir hedef. Korumalı ve hızlı. Sivil kayıp = kontrat iptal."
+            clueDetail: "Plaza bölgesinde (güneyde) PARLAK MAVİ renkte hızlı yürüyen hedef. Korumalı. Sivil kayıp = kontrat iptal.",
+            targetColor: 0x0033ff, targetZone: 'plaza', targetEmissive: new THREE.Color(0, 0.3, 3.0)
         },
         { sender: "Fixer_0x99", title: "Geri Ödeme", text: "Borçlularım parayı vermedi. Onları bu insan seli içinde bul.", target: 15 },
         {
             sender: "GH0ST_RUNNER", title: "// VERİ KAÇIRMA //",
             text: "KuroNet'in sunucusundan bir paket çaldık. Ama kurye ele geçirildi. Paketi endüstri bölgesindeki ölü kutusundan al ve plaza'daki güvenli eve ulaştır. Alarm verildi — peşinde olacaklar. Çatışma yok. Sadece koş.",
-            target: 1,
-            type: 'datarun',
-            reward: 2000,
-            timeLimit: 90
-        }
+            target: 1, type: 'datarun', reward: 2000, timeLimit: 90
+        },
+        // --- ÇATI KONTRATIARI (sadece sniper ile) ---
+        {
+            sender: "SkyWatcher_7", title: "// ÇATI SUİKASTI — SOKAK SEVİYESİ //",
+            text: "Hedef sokak seviyesinde korumaları arasında. Altında yaklaşmak imkânsız. Tepeden al. Kırmızı kapüşonlu, elinde çanta taşıyan tek kişi o. Yanlış birini vurursan kontrat anında iptal.",
+            target: 1, type: 'bounty', requiresRooftop: true, reward: 3000,
+            clue: "KIRMIZI KAPÜŞONLU — SOKAK BÖLGESİ",
+            clueDetail: "Sokak bölgesinde (orta) KIRMIZI-PEMBE renkte, diğerlerinden hızlı hareket eden hedef. Çatıdan nişan al.",
+            targetColor: 0xff0055, targetZone: 'street', targetEmissive: new THREE.Color(3.0, 0, 0.4)
+        },
+        {
+            sender: "Neon_Kira", title: "// YÜKSEK DEĞER — PLAZA ÇATI //",
+            text: "KuroNet'in plaza direktörü korumaları arasında. Yeşil holografik implantları gözle görülür. Sadece o direktör — etrafındaki siviller değil. Çatıdan tek atış fırsatın var.",
+            target: 1, type: 'bounty', requiresRooftop: true, reward: 4500,
+            clue: "YEŞİL İMPLANT IŞIKLI — PLAZA BÖLGESİ",
+            clueDetail: "Plaza bölgesinde (güneyde) PARLAK YEŞİL ışıklı implantları olan yavaş yürüyen hedef. Uzun menzil gerekli.",
+            targetColor: 0x00ff44, targetZone: 'plaza', targetEmissive: new THREE.Color(0, 3.5, 0.3)
+        },
+        {
+            sender: "Red_Circuit", title: "// ENDÜSTRİ TETİKÇİSİ //",
+            text: "Fabrika sahasında bir ajan rakiplerimizin verisini taşıyor. Sarı güvenlik kıyafeti içinde, saha içinde yürüyor. Gürültüden çıkan her kurşun alarm verir — uzaktan bitir.",
+            target: 1, type: 'bounty', requiresRooftop: true, reward: 3800,
+            clue: "SARI GÜVENLİK KIYAFETİ — ENDÜSTRİ BÖLGESİ",
+            clueDetail: "Endüstri bölgesinde (kuzeyde) PARLAK SARI renkte, diğerlerinden farklı yavaş dolaşan hedef. Çatıdan nişan al.",
+            targetColor: 0xffdd00, targetZone: 'industrial', targetEmissive: new THREE.Color(2.5, 1.8, 0)
+        },
     ];
 
     const GAME = {
@@ -1574,8 +1574,8 @@ window.onload = function() {
                 worldGroup.add(building); building.updateMatrixWorld(true); obstacles.push(new THREE.Box3().setFromObject(building));
                 buildings.push({ mesh: building, x: bX, z: bZ, w, h, d, district: z > 100 ? 'industrial' : (z < -100 ? 'plaza' : 'street') });
 
-                // Çok yüksek binalar için giriş kapısı + teras ışınlanma noktası
-                if(h > 44 && Math.random() > 0.68 && buildingEntries.length < 12) {
+                // Tüm bölgelerde yüksek binalar için giriş kapısı (eşik düşürüldü, limit artırıldı)
+                if(h > 38 && Math.random() > 0.48 && buildingEntries.length < 28) {
                     // Giriş kapısı hologram mesh
                     const doorH = 3.8, doorW = 3.0;
                     const doorMat = new THREE.MeshBasicMaterial({ color: 0x00ffcc, transparent: true, opacity: 0.55, side: THREE.DoubleSide });
@@ -2399,7 +2399,7 @@ window.onload = function() {
         const proj = new THREE.Mesh(projGeo, isPlayer ? projMatPlayer : projMatEnemy);
         let safeDir = direction.clone(); proj.position.copy(origin).add(safeDir.multiplyScalar(1.5)); 
         proj.quaternion.setFromUnitVectors(new THREE.Vector3(0, 0, 1), safeDir); 
-        proj.velocity = direction.clone().normalize().multiplyScalar(100); proj.isPlayer = isPlayer; proj.life = 1.0; scene.add(proj); projectiles.push(proj);
+        proj.velocity = direction.clone().normalize().multiplyScalar(200); proj.isPlayer = isPlayer; proj.life = 1.0; scene.add(proj); projectiles.push(proj);
         
         if(isPlayer) {
             if(!GAME.metroRiding) provokeCity(0.2);
@@ -2702,7 +2702,7 @@ window.onload = function() {
     }
 
     function spawnStreetIncident() {
-        if(cityLife.currentIncident || cityEventActive || GAME.isPaused) return;
+        if(cityLife.currentIncident || GAME.isPaused) return;
         cleanupStreetIncident();
         const pos = randomRoadPointNearPlayer();
         const type = Math.random() > 0.45 ? 'crash' : 'gang';
@@ -3112,44 +3112,7 @@ window.onload = function() {
     }
     refreshBillboards(false);
 
-    const CITY_EVENTS = [
-        {id:'bank',title:'SİBER BANKA SOYGUNU',desc:'Çete banka sistemini hackliyor. Müdahale et veya payını al.',interveneReward:800,ignoreReward:200},
-        {id:'gang',title:'ÇETE SAVAŞI',desc:'İki rakip fraksiyon kavgasına tutuştu. Taraf seç.',interveneReward:600,ignoreReward:0},
-        {id:'kidnap',title:'SİBER KAÇIRMA',desc:'Bir kurye saldırıya uğradı. Kurtarırsan büyük ödül.',interveneReward:1000,ignoreReward:0},
-        {id:'convoy',title:'YÜKSEK DEĞER KONVOY',desc:'KuroNet konvoyu geçiyor. Durdurabilirsen kargo senin.',interveneReward:1200,ignoreReward:300},
-    ];
-    let cityEventActive=false;
-    let _cityEventClock=0; const _CITY_EVENT_INTERVAL=60;
-
-    function triggerCityEvent() {
-        if(cityEventActive||GAME.isPaused) return;
-        cityEventActive=true;
-        let ev=CITY_EVENTS[Math.floor(Math.random()*CITY_EVENTS.length)];
-        document.getElementById('ceb-desc').innerText=ev.desc;
-        document.querySelector('#city-event-banner .ceb-title').innerText=`▶ ${ev.title}`;
-        let banner=document.getElementById('city-event-banner'); if(banner) banner.style.display='block';
-        let evX=playerMesh.position.x+(Math.random()-0.5)*120;
-        let evZ=playerMesh.position.z+(Math.random()-0.5)*120;
-        let eventEnemies=[];
-        for(let i=0;i<5;i++){
-            const em=new THREE.Mesh(npcGeo,enemyEliteMat.clone());
-            em.position.set(evX+(i%3)*5-5,0,evZ+Math.floor(i/3)*5);
-            em.hp=150;em.isElite=true;em.isInfected=false;em.infectTimer=0;em.infectTicks=0;em.isVert=true;em.direction=1;em.speed=6;
-            scene.add(em);enemies.push(em);eventEnemies.push(em);
-        }
-        document.getElementById('ceb-intervene').onclick=()=>{
-            banner.style.display='none';cityEventActive=false;
-            GAME.score+=ev.interveneReward;if(scoreDisplay) scoreDisplay.innerText=GAME.score.toString().padStart(4,'0');
-            showLootMessage(`✓ MÜDAHALE: +${ev.interveneReward} KRD`,"#00ffcc");
-            provokeCity(0.75);
-            eventEnemies.forEach(e=>{e.isChaser=true;e.speed=12;});
-        };
-        document.getElementById('ceb-ignore').onclick=()=>{
-            banner.style.display='none';cityEventActive=false;
-            if(ev.ignoreReward>0){GAME.score+=ev.ignoreReward;if(scoreDisplay) scoreDisplay.innerText=GAME.score.toString().padStart(4,'0');showLootMessage(`~ GÖZ YUMU: +${ev.ignoreReward} KRD`,"#778899");}
-        };
-        setTimeout(()=>{if(cityEventActive){banner.style.display='none';cityEventActive=false;}},30000);
-    }
+    // (Çete Savaşı bildirim sistemi kaldırıldı — gameplay değeri yoktu)
     // A noktası = pickup (endüstri), B noktası = teslim (plaza)
     // =====================================================================
     const DR_A_POS = new THREE.Vector3(40, 0, 140);   // Endüstri kuzeyi
@@ -3311,7 +3274,7 @@ window.onload = function() {
                     drBeaconB.visible = true;  drPillarB.visible = true;
                     drCarryRing.visible = true;
                     _drUpdateHUDPhase('carrying');
-                    showLootMessage("📦 VERİ PAKETİ ALINDI — KAÇIYORSUN!", "#00ccff");
+                    showLootMessage("📦 VERİ PAKETİ ALINDI — HEDEF: PLAZA GÜNEY / GÜVENLİ EV — KAÇIYORSUN!", "#00ccff");
 
                     // Kovalama başlat
                     GAME.datarunChasing = true;
@@ -3407,44 +3370,53 @@ window.onload = function() {
     }
 
     function spawnBountyTarget(contractData) {
-        let isEliteContract = contractData.clue.includes('PLAZA');
-        let spawnZ = isEliteContract ? (-(120 + Math.random() * 80)) : (120 + Math.random() * 80);
-        let spawnX = (Math.random() - 0.5) * 80;
+        const zone = contractData.targetZone || 'industrial';
+        let spawnZ = zone === 'plaza' ? -(120 + Math.random()*80) : zone === 'industrial' ? (120 + Math.random()*80) : (Math.random()-0.5)*80;
+        let spawnX = (Math.random()-0.5)*80;
 
-        // Bounty hedef: detaylı karakter, özel emissive renk ile
         const target = buildCharacterGroup('civilian', false);
-        // Tüm mesh'leri bounty rengiyle boyayın
-        const bountyMat = isEliteContract ? bountyTargetMatBlue : bountyTargetMatRed;
+
+        // Kontratta belirtilen rengi kullan — her hedef farklı
+        const emissiveCol = contractData.targetEmissive || new THREE.Color(2.5, 0.15, 0);
+        const baseCol     = contractData.targetColor    || 0x1a0000;
+        const bountyMat   = new THREE.MeshStandardMaterial({
+            color: baseCol, emissive: emissiveCol,
+            roughness: 0.4, metalness: 0.2
+        });
         target.traverse(child => { if(child.isMesh) child.material = bountyMat; });
 
-        target.isVert      = Math.random() > 0.5;
-        target.direction   = Math.random() > 0.5 ? 1 : -1;
-        target.speed       = 3 + Math.random() * 2;
+        // Pulsing ışık halkası (yerden yükselen)
+        const ringGeo = new THREE.RingGeometry(0.8, 1.1, 24);
+        const ringMat = new THREE.MeshBasicMaterial({ color: emissiveCol, transparent: true, opacity: 0.7, side: THREE.DoubleSide });
+        const ring = new THREE.Mesh(ringGeo, ringMat);
+        ring.rotation.x = -Math.PI / 2; ring.position.y = 0.05;
+        target.add(ring); target._bountyRing = ring; target._bountyRingMat = ringMat;
+
+        // Çarpı işareti / diamond marker yukarıda
+        const diamondGeo = new THREE.OctahedronGeometry(0.35, 0);
+        const diamondMat = new THREE.MeshBasicMaterial({ color: emissiveCol });
+        const diamond = new THREE.Mesh(diamondGeo, diamondMat);
+        diamond.position.y = 3.2; diamond.rotation.y = Math.PI/4;
+        target.add(diamond); target._bountyDiamond = diamond;
+
+        target.isVert    = Math.random() > 0.5; target.direction = Math.random() > 0.5 ? 1 : -1;
+        target.speed     = 3 + Math.random()*2;
         target.position.set(spawnX, 0, spawnZ);
-        target.hp          = isEliteContract ? 150 : 100;
-        target.isBountyTarget = true;
-        target.isElite     = false;
-        target.isInfected  = false;
-        target.infectTimer = 0;
-        target.infectTicks = 0;
+        target.hp        = contractData.requiresRooftop ? 200 : (zone === 'plaza' ? 150 : 100);
+        target.isBountyTarget = true; target.isElite = false;
+        target.isInfected = false; target.infectTimer = 0; target.infectTicks = 0;
 
-        scene.add(target);
-        civilians.push(target);
-        GAME.bountyTarget         = target;
-        GAME.bountyTargetFound    = false;
-        GAME.bountyCivilianKilled = false;
-        GAME.bountyCompleted      = false;
-        GAME.bountyActive         = true;
+        scene.add(target); civilians.push(target);
+        GAME.bountyTarget = target; GAME.bountyTargetFound = false;
+        GAME.bountyCivilianKilled = false; GAME.bountyCompleted = false; GAME.bountyActive = true;
 
-        let mCol = isEliteContract ? new THREE.Color(0, 1, 5) : new THREE.Color(5, 0.3, 0);
+        const mCol = new THREE.Color(emissiveCol);
         markerBar.material = new THREE.MeshBasicMaterial({ color: mCol });
         markerDot.material = new THREE.MeshBasicMaterial({ color: mCol });
         bountyRingMat.color.copy(mCol);
-        bountyMarkerGroup.visible = false;
-        bountyRingMesh.visible    = false;
+        bountyMarkerGroup.visible = false; bountyRingMesh.visible = false;
 
-        let bhud = document.getElementById('bounty-hud');
-        if(bhud) bhud.style.display = 'block';
+        let bhud = document.getElementById('bounty-hud'); if(bhud) bhud.style.display = 'block';
         document.getElementById('bh-target-desc').innerText = contractData.clueDetail || contractData.clue;
         document.getElementById('bh-status').innerText      = '◈ HEDEF ARANIYOR';
         document.getElementById('bh-status').className      = 'bh-status hunting';
@@ -3457,6 +3429,9 @@ window.onload = function() {
         if(!GAME.bountyActive || GAME.bountyCompleted) return;
         let target = GAME.bountyTarget;
         if(!target) return;
+        // Diamond ve ring animasyonu
+        if(target._bountyDiamond) { target._bountyDiamond.rotation.y += 0.04; target._bountyDiamond.position.y = 3.2 + Math.sin(Date.now()*0.003)*0.25; }
+        if(target._bountyRingMat) { target._bountyRingMat.opacity = 0.4 + Math.sin(Date.now()*0.004)*0.35; }
 
         let dist = playerMesh.position.distanceTo(target.position);
 
@@ -3560,8 +3535,8 @@ window.onload = function() {
             let c = CONTRACTS[GAME.contractIndex];
             document.getElementById('c-sender').innerText = c.sender; document.getElementById('c-title').innerText = c.title; document.getElementById('c-body').innerText = c.text;
             if(c.type === 'bounty') {
-                document.getElementById('c-objective').innerText = `HEDEF: ${c.clue}\n⚠ SİVİL KAYIP = KONTRAT İPTAL`;
-                document.getElementById('c-objective').style.color = '#ff8800';
+                document.getElementById('c-objective').innerText = `HEDEF: ${c.clue}\n⚠ SİVİL KAYIP = KONTRAT İPTAL${c.requiresRooftop ? '\n🏢 ÇATI POZİSYONU GEREKLİ' : ''}`;
+                document.getElementById('c-objective').style.color = c.requiresRooftop ? '#ff8800' : '#ff6600';
             } else if(c.type === 'datarun') {
                 document.getElementById('c-objective').innerText = `A → B TAŞIMA | SÜRE: ${c.timeLimit}sn | ÖDÜL: +${c.reward} KRD (+SÜRE BONUSU)\n⚠ Paket alındığında alarm verilir — kaç!`;
                 document.getElementById('c-objective').style.color = '#00ccff';
@@ -3775,14 +3750,8 @@ window.onload = function() {
     });
     document.addEventListener('keyup', (e) => { const key = e.key.toLowerCase(); if(GAME.keys.hasOwnProperty(key)) GAME.keys[key] = false; });
 
-    // Sağ tık: sniper zoom aç/kapat
-    document.addEventListener('contextmenu', (e) => {
-        e.preventDefault();
-        if(GAME.mode === 'FPS' && GAME.weaponSlot === 2 && !GAME.isDriving) {
-            _sniperZoomed = !_sniperZoomed;
-            updateWeaponVisuals();
-        }
-    });
+    // Sağ tık context menüsünü engelle (zoom mousedown'da hallediliyor)
+    document.addEventListener('contextmenu', (e) => e.preventDefault());
 
     document.addEventListener('pointerlockchange', () => { isPointerLocked = document.pointerLockElement === document.body; });
     document.addEventListener('mousemove', (e) => {
@@ -3854,19 +3823,33 @@ window.onload = function() {
     }
     
     document.addEventListener('mousedown', (e) => {
-        if (GAME.metroRiding && !GAME.isMobile && !GAME.isPaused) {
-            if (!isPointerLocked) document.body.requestPointerLock();
+        if(GAME.metroRiding && !GAME.isMobile && !GAME.isPaused) {
+            if(!isPointerLocked) document.body.requestPointerLock();
             return;
         }
-        if (GAME.mode === 'FPS' && !GAME.isMobile && !GAME.isPaused && !GAME.metroRiding) {
-            if (!isPointerLocked) {
-                if (e.target.closest('.cyber-btn') || e.target.closest('#contract-modal') || e.target.closest('#msg-notification')) return;
+        if(GAME.mode === 'FPS' && !GAME.isMobile && !GAME.isPaused && !GAME.metroRiding) {
+            if(!isPointerLocked) {
+                if(e.target.closest('.cyber-btn') || e.target.closest('#contract-modal') || e.target.closest('#msg-notification')) return;
                 document.body.requestPointerLock();
-            } else GAME.isShooting = true; 
+            } else {
+                if(e.button === 0) {
+                    // Sol tık: ateş
+                    GAME.isShooting = true;
+                } else if(e.button === 2) {
+                    // Sağ tık: sniper zoom döngüsü (pointer lock'ta contextmenu çalışmaz)
+                    if(GAME.weaponSlot === 2 && !GAME.isDriving) {
+                        _sniperZoomLevel = (_sniperZoomLevel + 1) % 3;
+                        updateWeaponVisuals();
+                        showLootMessage(`🔭 ZOOM: ${SNIPER_LABELS[_sniperZoomLevel]}`, '#00ffcc');
+                    }
+                }
+            }
         } else { handleRTSInteraction(e.clientX, e.clientY, e.target); }
     });
-    
-    document.addEventListener('mouseup', () => GAME.isShooting = false);
+
+    document.addEventListener('mouseup', (e) => {
+        if(e.button === 0) GAME.isShooting = false;
+    });
     document.getElementById('game-container').addEventListener('touchstart', (e) => { if(GAME.mode === 'RTS' && e.target.tagName === 'CANVAS') { e.preventDefault(); handleRTSInteraction(e.touches[0].clientX, e.touches[0].clientY, e.target); } }, {passive: false});
 
     function triggerContagion() {
@@ -4120,24 +4103,29 @@ window.onload = function() {
     // ================================================================
     // SİLAH SİSTEMİ
     // ================================================================
-    let _sniperZoomed = false;
+    // Keskin nişancı zoom seviyeleri: 0=1x (geniş), 1=3x (orta), 2=8x (yakın)
+    let _sniperZoomLevel = 0;
+    const SNIPER_FOVS   = [75, 24, 9];   // derece cinsinden FOV
+    const SNIPER_LABELS = ['1×', '3×', '8×'];
     let _sniperCooldown = 0;
 
     function switchWeapon(slot) {
         if(slot === GAME.weaponSlot) return;
         if(slot === 2 && !GAME.onRooftop) { showLootMessage('KESKİN NİŞANCI SADECE TERASTAN KULLANILIR', '#ff6600'); return; }
         GAME.weaponSlot = slot;
+        _sniperZoomLevel = 0; // silah değişince zoom sıfırla
         updateWeaponVisuals();
     }
 
     function updateWeaponVisuals() {
         const inFPS = GAME.mode === 'FPS' && !GAME.isDriving && !GAME.metroRiding;
         const slot = GAME.weaponSlot;
+        const zoomed = _sniperZoomLevel > 0;
         gunGroup.visible    = inFPS && slot === 1;
         sniperGroup.visible = inFPS && slot === 2;
-        // Scope overlay
+        // Scope overlay sadece zoom > 0 iken
         const scopeEl = document.getElementById('sniper-scope');
-        if(scopeEl) scopeEl.style.display = (inFPS && slot===2 && _sniperZoomed) ? 'block' : 'none';
+        if(scopeEl) scopeEl.style.display = (inFPS && slot===2 && zoomed) ? 'block' : 'none';
         // Weapon HUD
         const wHud = document.getElementById('weapon-hud');
         const wh1  = document.getElementById('wh-1');
@@ -4145,12 +4133,10 @@ window.onload = function() {
         if(wHud) wHud.style.display = inFPS ? 'block' : 'none';
         if(wh1) wh1.className = 'wh-slot' + (slot===1?' active':'');
         if(wh2) wh2.className = 'wh-slot' + (slot===2?' active':'');
-        // FOV değiştir (sniper zoom)
-        if(inFPS && slot===2 && _sniperZoomed) {
-            camera.fov = 15; camera.updateProjectionMatrix();
-        } else {
-            camera.fov = 75; camera.updateProjectionMatrix();
-        }
+        if(wh2 && slot===2) wh2.innerText = `[2] KESKİN NİŞANCI  ${SNIPER_LABELS[_sniperZoomLevel]}`;
+        // FOV
+        const targetFov = (inFPS && slot===2) ? SNIPER_FOVS[_sniperZoomLevel] : 75;
+        camera.fov = targetFov; camera.updateProjectionMatrix();
     }
 
     function sniperShoot() {
@@ -4419,10 +4405,7 @@ window.onload = function() {
 
         if(!GAME.isPaused) {
             // --- ŞEHİR OLAYLARI TIMER ---
-            _cityEventClock += dt;
-            if(_cityEventClock >= _CITY_EVENT_INTERVAL && !cityEventActive) {
-                _cityEventClock = 0; triggerCityEvent();
-            }
+            // (Çete Savaşı bildirimi kaldırıldı)
 
             // --- UPGRADE BUTON GÖRÜNÜRLÜKİ (araçtayken göster) ---
             let upgBtn = document.getElementById('upgrade-btn');
