@@ -1130,7 +1130,7 @@ window.onload = function() {
             text: "Endüstri bölgesinde bir hedef dolaşıyor. Yanından geçen kalabalık onun kalkanı. Sabrın ve tetik disiplinin test edilecek. Tek kurşun, tek hedef. Sıfır yan kayıp.",
             target: 1, type: 'bounty', reward: 1500,
             clue: "KIRMIZI CEKETLİ, ENDÜSTRİ BÖLGESİ",
-            clueDetail: "Endüstri bölgesinde (kuzeyde) KIRMIZI-TURUNCU renkte yavaş yürüyen hedef. Etrafındaki sivillere zarar verme.",
+            clueDetail: "Endüstri bölgesinde (güneyde) KIRMIZI-TURUNCU renkte yavaş yürüyen hedef. Etrafındaki sivillere zarar verme.",
             targetColor: 0xff2200, targetZone: 'industrial', targetEmissive: new THREE.Color(2.2, 0.1, 0)
         },
         { sender: "Kızıl Devre", title: "Kanlı Çipler", text: "Kaldırımdaki serserileri hallet. Araçla ezmek de serbest!", target: 12 },
@@ -1139,13 +1139,13 @@ window.onload = function() {
             text: "Plaza bölgesinde korumalı biri geziniyor. Cebi dolu, kalabalığın içinde saklı. Sadece o. Bir tane fazla kurşun tüm ödemeyi siler.",
             target: 1, type: 'bounty', reward: 2500,
             clue: "MAVİ TAKİM ELBİSELİ, PLAZA BÖLGESİ",
-            clueDetail: "Plaza bölgesinde (güneyde) PARLAK MAVİ renkte hızlı yürüyen hedef. Korumalı. Sivil kayıp = kontrat iptal.",
+            clueDetail: "Plaza bölgesinde (kuzeyde) PARLAK MAVİ renkte hızlı yürüyen hedef. Korumalı. Sivil kayıp = kontrat iptal.",
             targetColor: 0x0033ff, targetZone: 'plaza', targetEmissive: new THREE.Color(0, 0.3, 3.0)
         },
         { sender: "Fixer_0x99", title: "Geri Ödeme", text: "Borçlularım parayı vermedi. Onları bu insan seli içinde bul.", target: 15 },
         {
             sender: "GH0ST_RUNNER", title: "// VERİ KAÇIRMA //",
-            text: "KuroNet'in sunucusundan bir paket çaldık. Ama kurye ele geçirildi. Paketi endüstri bölgesindeki ölü kutusundan al ve plaza'daki güvenli eve ulaştır. Alarm verildi — peşinde olacaklar. Çatışma yok. Sadece koş.",
+            text: "KuroNet'in sunucusundan bir paket çaldık. Ama kurye ele geçirildi. Paketi endüstri bölgesindeki (güney) ölü kutusundan al ve plaza'daki (kuzey) güvenli eve ulaştır. Alarm verildi — peşinde olacaklar. Çatışma yok. Sadece koş.",
             target: 1, type: 'datarun', reward: 2000, timeLimit: 90
         },
         // --- ÇATI KONTRATIARI (sadece sniper ile) ---
@@ -1162,7 +1162,7 @@ window.onload = function() {
             text: "KuroNet'in plaza direktörü korumaları arasında. Yeşil holografik implantları gözle görülür. Sadece o direktör — etrafındaki siviller değil. Çatıdan tek atış fırsatın var.",
             target: 1, type: 'bounty', requiresRooftop: true, reward: 4500,
             clue: "YEŞİL İMPLANT IŞIKLI — PLAZA BÖLGESİ",
-            clueDetail: "Plaza bölgesinde (güneyde) PARLAK YEŞİL ışıklı implantları olan yavaş yürüyen hedef. Uzun menzil gerekli.",
+            clueDetail: "Plaza bölgesinde (kuzeyde) PARLAK YEŞİL ışıklı implantları olan yavaş yürüyen hedef. Uzun menzil gerekli.",
             targetColor: 0x00ff44, targetZone: 'plaza', targetEmissive: new THREE.Color(0, 3.5, 0.3)
         },
         {
@@ -1170,7 +1170,7 @@ window.onload = function() {
             text: "Fabrika sahasında bir ajan rakiplerimizin verisini taşıyor. Sarı güvenlik kıyafeti içinde, saha içinde yürüyor. Gürültüden çıkan her kurşun alarm verir — uzaktan bitir.",
             target: 1, type: 'bounty', requiresRooftop: true, reward: 3800,
             clue: "SARI GÜVENLİK KIYAFETİ — ENDÜSTRİ BÖLGESİ",
-            clueDetail: "Endüstri bölgesinde (kuzeyde) PARLAK SARI renkte, diğerlerinden farklı yavaş dolaşan hedef. Çatıdan nişan al.",
+            clueDetail: "Endüstri bölgesinde (güneyde) PARLAK SARI renkte, diğerlerinden farklı yavaş dolaşan hedef. Çatıdan nişan al.",
             targetColor: 0xffdd00, targetZone: 'industrial', targetEmissive: new THREE.Color(2.5, 1.8, 0)
         },
     ];
@@ -1414,19 +1414,24 @@ window.onload = function() {
     // --- PROSEDÜREL DOKULAR ---
     function createRoadTexture() {
         const canvas = document.createElement('canvas'); canvas.width = 1024; canvas.height = 1024; const ctx = canvas.getContext('2d');
-        ctx.fillStyle = '#080a12'; ctx.fillRect(0, 0, 1024, 1024); 
-        const margin = 170; const blockSizePx = 1024 - (margin * 2);
-        ctx.fillStyle = '#111522'; ctx.fillRect(margin, margin, blockSizePx, blockSizePx);
-        for(let p=0; p<100; p++) {
-            ctx.fillStyle = `rgba(0, 50, 100, ${Math.random()*0.1})`;
-            ctx.beginPath(); ctx.arc(Math.random()*1024, Math.random()*1024, Math.random()*80+20, 0, Math.PI*2); ctx.fill();
+        // Tek tip koyu zemin — kavşak/yol renk farkı yok
+        ctx.fillStyle = '#0a0c16'; ctx.fillRect(0, 0, 1024, 1024);
+        // İnce gürültü dokusu
+        for(let p=0; p<60; p++) {
+            ctx.fillStyle = `rgba(0, 40, 80, ${Math.random()*0.06})`;
+            ctx.beginPath(); ctx.arc(Math.random()*1024, Math.random()*1024, Math.random()*60+10, 0, Math.PI*2); ctx.fill();
         }
-        ctx.shadowColor = '#00ffff'; ctx.shadowBlur = 30; ctx.strokeStyle = '#00ffff'; ctx.lineWidth = 6; ctx.strokeRect(margin, margin, blockSizePx, blockSizePx);
-        const glow = ctx.createLinearGradient(0, 0, 0, 1024);
-        glow.addColorStop(0, 'rgba(0, 255, 255, 0.05)'); glow.addColorStop(0.5, 'rgba(255, 0, 255, 0.15)'); glow.addColorStop(1, 'rgba(0, 255, 255, 0.05)');
-        ctx.fillStyle = glow; ctx.fillRect(0, 0, 1024, 1024);
-        ctx.shadowColor = '#ff5500'; ctx.shadowBlur = 15; ctx.fillStyle = '#ff8800'; 
-        for(let i=64; i<1024; i+=128) { ctx.fillRect(0, i, 8, 64); ctx.fillRect(1016, i, 8, 64); ctx.fillRect(i, 0, 64, 8); ctx.fillRect(i, 1016, 64, 8); }
+        const margin = 170;
+        // Cyan çerçeve — blok sınırı (hafif, sadece yön hissi için)
+        ctx.shadowColor = '#00ffff'; ctx.shadowBlur = 8; ctx.strokeStyle = 'rgba(0,255,255,0.18)'; ctx.lineWidth = 3;
+        ctx.strokeRect(margin, margin, 1024 - margin*2, 1024 - margin*2);
+        ctx.shadowBlur = 0;
+        // Yol şerit işaretleri (turuncu noktalı çizgi)
+        ctx.fillStyle = '#ff7700';
+        for(let i=64; i<1024; i+=128) {
+            ctx.fillRect(0, i, 8, 64); ctx.fillRect(1016, i, 8, 64);
+            ctx.fillRect(i, 0, 64, 8); ctx.fillRect(i, 1016, 64, 8);
+        }
         const tex = new THREE.CanvasTexture(canvas); tex.wrapS = THREE.RepeatWrapping; tex.wrapT = THREE.RepeatWrapping; return tex;
     }
     
@@ -2256,7 +2261,7 @@ window.onload = function() {
     }
 
     // === SARI TAKSİ (tek, özel) ===
-    const TAXI_PALETTE = { body: 0xffd700, neon: 0xffaa00, glass: 0x334433, accent: 0xff8800 };
+    const TAXI_PALETTE = { body: 0xffd700, trim: 0xff8800, neon: 0xffaa00, glass: 0x334433, accent: 0xff8800 };
     taxiCar = createDetailedCar(TAXI_PALETTE, true);
     taxiCar.isTaxi = true; taxiCar.isParked = true; taxiCar.isPlayerDriven = false;
     taxiCar.speed = 0; taxiCar.isVertical = true; taxiCar.direction = 1;
@@ -2272,6 +2277,80 @@ window.onload = function() {
     const taxiSignText = new THREE.Mesh(new THREE.BoxGeometry(1.2, 0.25, 0.1), new THREE.MeshBasicMaterial({color:0x111100}));
     taxiSignText.position.set(0, 0, 0.26); taxiSign.add(taxiSignText);
     scene.add(taxiCar); vehicles.push(taxiCar);
+
+    // ================================================================
+    // ================================================================
+    // YEŞİL ALAN — Kullanıcı tarafından ölçülen koordinatlara göre:
+    // Sol üst: (-51,8) — Sağ üst: (-9,8)
+    // Sol alt: (-51,51) — Sağ alt: (-9,51)
+    // Merkez: (-30, 30)  Boyut: 42 × 43
+    // ================================================================
+    (function buildPark() {
+        const PARK_CX = -30, PARK_CZ = 30;
+        const PARK_W  = 42,  PARK_D  = 43;
+
+        // --- Zemin: çok koyu, cyberpunk tonu ---
+        // Yol rengine yakın ama çok hafif yeşil imasıyla
+        const grassMat = new THREE.MeshStandardMaterial({
+            color: 0x0b0f0d, roughness: 0.97, metalness: 0.0,
+            emissive: new THREE.Color(0.008, 0.014, 0.010)
+        });
+        const grassMesh = new THREE.Mesh(new THREE.PlaneGeometry(PARK_W, PARK_D), grassMat);
+        grassMesh.rotation.x = -Math.PI / 2;
+        grassMesh.position.set(PARK_CX, -0.94, PARK_CZ);
+        scene.add(grassMesh);
+
+        // Çok ince, mat beton bordür — neon yok, sadece hafif yükseklik farkı
+        const kerbMat = new THREE.MeshStandardMaterial({ color: 0x181c18, roughness: 0.95, metalness: 0.0 });
+        [[PARK_W+0.2, 0.18, 0.28, 0, PARK_CZ - PARK_D/2, 0],
+         [PARK_W+0.2, 0.18, 0.28, 0, PARK_CZ + PARK_D/2, 0],
+         [0.28, 0.18, PARK_D+0.2, PARK_CX - PARK_W/2, 0, 0],
+         [0.28, 0.18, PARK_D+0.2, PARK_CX + PARK_W/2, 0, 0],
+        ].forEach(([w,h,d,ox,oz]) => {
+            const k = new THREE.Mesh(new THREE.BoxGeometry(w,h,d), kerbMat);
+            k.position.set(PARK_CX+(ox||0), -0.85, PARK_CZ+(oz||0));
+            scene.add(k);
+        });
+
+        // --- Procedural Çam Ağaçları ---
+        const trunkMat = new THREE.MeshStandardMaterial({ color: 0x2a1808, roughness: 0.9, metalness: 0.0 });
+        const pineMats = [
+            new THREE.MeshStandardMaterial({ color: 0x0c2e10, roughness: 0.85, metalness: 0.0, emissive: new THREE.Color(0.006, 0.02, 0.008) }),
+            new THREE.MeshStandardMaterial({ color: 0x0e3814, roughness: 0.80, metalness: 0.0, emissive: new THREE.Color(0.006, 0.022, 0.008) }),
+            new THREE.MeshStandardMaterial({ color: 0x0a2410, roughness: 0.90, metalness: 0.0, emissive: new THREE.Color(0.005, 0.016, 0.007) }),
+        ];
+
+        function makePineTree(px, pz, scale) {
+            const group = new THREE.Group();
+            group.position.set(px, -1.0, pz);
+            // Gövde
+            const trunk = new THREE.Mesh(new THREE.CylinderGeometry(0.20*scale, 0.30*scale, 1.8*scale, 6), trunkMat);
+            trunk.position.set(0, 0.9*scale, 0);
+            group.add(trunk);
+            // Katmanlı koni yapraklar
+            const mat = pineMats[Math.floor(Math.random() * 3)];
+            [[3.0,3.6,2.2],[2.3,3.0,3.9],[1.6,2.6,5.2],[0.9,2.0,6.4]].forEach(([r,h,y]) => {
+                const cone = new THREE.Mesh(new THREE.ConeGeometry(r*scale, h*scale, 7), mat);
+                cone.position.y = y*scale;
+                group.add(cone);
+            });
+            group.rotation.y = Math.random() * Math.PI * 2;
+            group.rotation.z = (Math.random() - 0.5) * 0.07;
+            scene.add(group);
+        }
+
+        // Poisson-benzeri dağılım — yoldan içeride kal
+        const halfW = PARK_W/2 - 3.5, halfD = PARK_D/2 - 3.5;
+        const placed = []; let attempts = 0;
+        while(placed.length < 18 && attempts < 500) {
+            attempts++;
+            const tx = PARK_CX + (Math.random()*2-1)*halfW;
+            const tz = PARK_CZ + (Math.random()*2-1)*halfD;
+            let ok = true;
+            for(const p of placed) { if(Math.hypot(tx-p.x, tz-p.z) < 6.5) { ok=false; break; } }
+            if(ok) { placed.push({x:tx,z:tz}); makePineTree(tx, tz, 0.7+Math.random()*0.6); }
+        }
+    })();
 
     const playerGeo = new THREE.BoxGeometry(1.2, 2.4, 1.2); const playerMat = new THREE.MeshBasicMaterial({ color: glowCyan, wireframe: true });
     const playerMesh = new THREE.Mesh(playerGeo, playerMat); playerMesh.position.set(0, 0.2, 0); scene.add(playerMesh);
@@ -2710,6 +2789,17 @@ window.onload = function() {
         });
         charGroup._mat = type === 'civilian' ? civMat : (isElite ? enemyEliteMat : enemyMat);
 
+        // Düşman üzerinde küçük kırmızı ters üçgen işareti
+        if(type === 'enemy') {
+            const mGeo = new THREE.ConeGeometry(0.22, 0.32, 3);
+            const mMat = new THREE.MeshBasicMaterial({ color: 0xff1133 });
+            const marker = new THREE.Mesh(mGeo, mMat);
+            marker.position.y = 3.0;
+            marker.rotation.z = Math.PI; // aşağı baktır
+            charGroup.add(marker);
+            charGroup._hostileMarker = marker;
+        }
+
         scene.add(charGroup);
         isArray.push(charGroup);
     }
@@ -2795,6 +2885,9 @@ window.onload = function() {
                     fighter.traverse(child => { if(child.isMesh) child.material = sideMats[s]; });
                     fighter.position.set(pos.x + (s===0?-10:10) + (Math.random()-0.5)*4, 0, pos.z + (i-1.5)*3.2);
                     fighter._side = s; fighter._shotClock = Math.random()*0.8;
+                    // Düşman marker
+                    const _fm=new THREE.Mesh(new THREE.ConeGeometry(0.22,0.32,3),new THREE.MeshBasicMaterial({color:0xff1133}));
+                    _fm.position.y=3.0; _fm.rotation.z=Math.PI; fighter.add(_fm); fighter._hostileMarker=_fm;
                     scene.add(fighter); rememberIncidentObject(fighter);
                     cityLife.currentIncident.fighters.push(fighter);
                 }
@@ -2889,7 +2982,7 @@ window.onload = function() {
                 playerMesh.position.z + Math.cos(now*0.0015 + i*Math.PI) * orbit
             );
             d.rotation.y += dt * 2.4;
-            d._cone.material.opacity = 0.12 + Math.sin(now*0.01 + i) * 0.05;
+            d._cone.visible = false; // Koni görsel efekti kaldırıldı
         });
     }
 
@@ -3240,7 +3333,7 @@ window.onload = function() {
         let hintEl  = document.getElementById('dr-hint');
         if(phase === 'goto_a') {
             if(phaseEl) phaseEl.innerText = '▶ A NOKTASI: PAKETİ AL';
-            if(hintEl)  hintEl.innerText  = 'Endüstri bölgesinde mavi ışık sütununa koş';
+            if(hintEl)  hintEl.innerText  = 'Endüstri bölgesine git (güney) — mavi ışık sütununa koş';
         } else if(phase === 'carrying') {
             if(phaseEl) { phaseEl.innerText = '🔴 TAŞIYORSİN — B NOKTASINA KAÇ'; phaseEl.style.color = '#ff6644'; }
             if(hintEl)  hintEl.innerText = '[Q] Zamanı Yavaşlat • Binalardan sıyrıl';
@@ -3327,7 +3420,7 @@ window.onload = function() {
                     drBeaconB.visible = true;  drPillarB.visible = true;
                     drCarryRing.visible = true;
                     _drUpdateHUDPhase('carrying');
-                    showLootMessage("📦 VERİ PAKETİ ALINDI — HEDEF: PLAZA GÜNEY / GÜVENLİ EV — KAÇIYORSUN!", "#00ccff");
+                    showLootMessage("📦 VERİ PAKETİ ALINDI — HEDEF: PLAZA KUZEY / GÜVENLİ EV — KAÇIYORSUN!", "#00ccff");
 
                     // Kovalama başlat
                     GAME.datarunChasing = true;
@@ -4384,6 +4477,111 @@ window.onload = function() {
         if(audioCtxSFX && _ambienceGain) _ambienceGain.gain.setTargetAtTime(0.5,  audioCtxSFX.currentTime, 1.2);
         showLootMessage('◉ BİLİNÇ PAKETİ YÜKLENDİ — SİSTEM AKTİF', '#00ffcc');
     }
+    // ================================================================
+    // GAMEPAD SİSTEMİ — Logitech F710 (Web Gamepad API)
+    // Button index — Standard mapping (XInput):
+    //   0=A  1=B  2=X  3=Y  4=LB  5=RB  6=LT  7=RT
+    //   8=Back  9=Start  10=LSclick  11=RSclick
+    //   12=D↑  13=D↓  14=D←  15=D→
+    // Axes: 0=LX  1=LY  2=RX  3=RY
+    // ================================================================
+    let _gpPrev = {};
+    const GP_DEAD = 0.14;
+
+    window.addEventListener('gamepadconnected', (e) => {
+        showLootMessage(`🎮 GAMEPAD: ${e.gamepad.id.slice(0,26)}`, '#4fe8c8');
+    });
+    window.addEventListener('gamepaddisconnected', () => {
+        showLootMessage('🎮 GAMEPAD BAĞLANTISI KESİLDİ', '#ff4d6a');
+    });
+
+    function _gpBtnDown(btns, prev, i) {
+        const cur = btns[i] ? (btns[i].value > 0.3 || btns[i].pressed) : false;
+        return cur && !((prev[i]||0) > 0.3);
+    }
+
+    function updateGamepad(dt) {
+        let gamepads = [];
+        try { gamepads = navigator.getGamepads ? navigator.getGamepads() : []; }
+        catch(e) { return; } // Permissions policy engeli — sessizce geç
+        let gp = null;
+        for(let g of gamepads) { if(g && g.connected) { gp = g; break; } }
+        if(!gp) { _gpPrev = {}; return; }
+
+        const btns = gp.buttons, axes = gp.axes, prev = _gpPrev;
+
+        if(!GAME.isPaused) {
+            // Sol analog → Hareket
+            const lx = Math.abs(axes[0]||0) > GP_DEAD ? axes[0] : 0;
+            const ly = Math.abs(axes[1]||0) > GP_DEAD ? axes[1] : 0;
+            GAME.keys.a = lx < -GP_DEAD; GAME.keys.d = lx > GP_DEAD;
+            GAME.keys.w = ly < -GP_DEAD; GAME.keys.s = ly > GP_DEAD;
+
+            // Sağ analog → FPS kamera (fare gibi hem camera hem playerMesh güncellenir)
+            if(GAME.mode === 'FPS' && !GAME.isDriving && !GAME.metroRiding) {
+                const rx = Math.abs(axes[2]||0) > GP_DEAD ? axes[2] : 0;
+                const ry = Math.abs(axes[3]||0) > GP_DEAD ? axes[3] : 0;
+                const sens = 2.2;
+                if(rx) {
+                    playerMesh.rotation.y -= rx * sens * dt; // fare ile aynı mantık
+                    camera.rotation.y = playerMesh.rotation.y;
+                }
+                if(ry) camera.rotation.x = Math.max(-Math.PI/2.2,
+                    Math.min(Math.PI/2.2, camera.rotation.x - ry * sens * dt));
+            }
+
+            // RT (7) → Ateş
+            GAME.isShooting = btns[7] ? btns[7].value > 0.3 : false;
+
+            // LT (6) → Atılma
+            if(_gpBtnDown(btns, prev, 6)) doDash();
+            // A (0) → Zıpla
+            if(_gpBtnDown(btns, prev, 0) && GAME.mode==='FPS' && !GAME.isDriving && GAME.isGrounded) GAME.jumpRequested = true;
+            // B (1) → Zaman Büküm
+            if(_gpBtnDown(btns, prev, 1)) toggleBulletTime();
+            // X (2) → Hack/Sirayet
+            if(_gpBtnDown(btns, prev, 2)) triggerContagion();
+            // Y (3) → Mod Değiştir
+            if(_gpBtnDown(btns, prev, 3)) toggleMode();
+            // RB (5) → Etkileşim
+            if(_gpBtnDown(btns, prev, 5)) doInteract();
+            // LB (4) → Taksicilik / Kontrat
+            if(_gpBtnDown(btns, prev, 4)) {
+                if(GAME.isDriving && GAME.currentVehicle===taxiCar) startTaxiMission();
+                else { const mb=document.getElementById('msg-notification'); if(mb&&mb.style.display!=='none') mb.click(); }
+            }
+            // D↑ (12) → Sniper zoom artır
+            if(_gpBtnDown(btns,prev,12) && GAME.weaponSlot===2) {
+                _sniperZoomLevel=(_sniperZoomLevel+1)%3; updateWeaponVisuals();
+                showLootMessage(`🔭 ZOOM: ${SNIPER_LABELS[_sniperZoomLevel]}`,'#00ffcc');
+            }
+            // D↓ (13) → Sniper zoom sıfırla
+            if(_gpBtnDown(btns,prev,13) && GAME.weaponSlot===2) { _sniperZoomLevel=0; updateWeaponVisuals(); }
+            // D← (14) → Plazma  /  D→ (15) → Sniper
+            if(_gpBtnDown(btns,prev,14)) switchWeapon(1);
+            if(_gpBtnDown(btns,prev,15)) switchWeapon(2);
+            // LS click (10) → Atılma
+            if(_gpBtnDown(btns,prev,10)) doDash();
+            // RS click (11) → Zoom sıfırla
+            if(_gpBtnDown(btns,prev,11) && GAME.weaponSlot===2) { _sniperZoomLevel=0; updateWeaponVisuals(); }
+        }
+
+        // Start (9) → Duraklat (her zaman)
+        if(_gpBtnDown(btns,prev,9)) {
+            GAME.isPaused=!GAME.isPaused;
+            showLootMessage(GAME.isPaused?'⏸ DURAKLATILDI':'▶ DEVAM','#4fe8c8');
+        }
+        // Back (8) → Kontrat menüsü
+        if(_gpBtnDown(btns,prev,8)) {
+            const modal=document.getElementById('contract-modal');
+            const mb=document.getElementById('msg-notification');
+            if(modal&&modal.style.display!=='none'){modal.style.display='none';GAME.isPaused=false;}
+            else if(mb&&mb.style.display!=='none') mb.click();
+        }
+
+        for(let i=0;i<btns.length;i++) prev[i]=btns[i]?btns[i].value:0;
+    }
+
     function handleFallDamage(landY) {
         if(GAME._fallFromY === null) return;
         const fallHeight = GAME._fallFromY - landY;
@@ -4743,6 +4941,8 @@ window.onload = function() {
                 }
             }
 
+            // Gamepad güncelle
+            updateGamepad(gameDt);
             // Motor sesi
             updateEngineSFX(GAME.isDriving ? GAME.carSpeedRaw : 0, GAME.isDriving);
             // Neon cızırtı ambient
@@ -4763,7 +4963,13 @@ window.onload = function() {
                 if(GAME.wantedLevel >= 2.5 && !_wantedMusicActive) startWantedMusic();
                 else if(GAME.wantedLevel < 1.5 && _wantedMusicActive) stopWantedMusic();
             }
-            // TAKSİ MİSYON güncelle
+            // Düşman hostile marker animasyonu
+        for(let e of enemies) {
+            if(e._hostileMarker) {
+                e._hostileMarker.position.y = 3.0 + Math.sin(now * 0.003 + e.position.x) * 0.18;
+                e._hostileMarker.visible = !e.isInfected; // hacklenince gizle
+            }
+        }
             if(GAME.taxiActive) updateTaxiMission(gameDt, now);
             else if(GAME.isDriving && GAME.currentVehicle !== taxiCar && GAME.taxiActive) cancelTaxiMission();
             // BİNA GİRİŞ YAKLAŞIM PROMPT
