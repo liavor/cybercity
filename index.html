@@ -188,6 +188,22 @@
             letter-spacing:-1px;
         }
 
+        /* ══ HITMARKER — vuruş onayı çarpı ══ */
+        #hit-marker {
+            position:absolute; top:50%; left:50%; width:20px; height:20px;
+            transform:translate(-50%,-50%) scale(0.4); pointer-events:none;
+            color:var(--c-jade); opacity:0;
+            transition:opacity 0.16s ease-out, transform 0.16s ease-out;
+        }
+        #hit-marker::before, #hit-marker::after {
+            content:''; position:absolute; background:currentColor;
+            box-shadow:0 0 6px currentColor; border-radius:1px;
+        }
+        #hit-marker::before { width:100%; height:2px; top:50%; left:0; transform:translateY(-50%) rotate(45deg); }
+        #hit-marker::after  { width:2px; height:100%; left:50%; top:0; transform:translateX(-50%) rotate(45deg); }
+        #hit-marker.show { opacity:1; transform:translate(-50%,-50%) scale(1); }
+        #hit-marker.kill { color:var(--c-coral); }
+
         /* ══ ACTION BUTTONS ══ */
         #abilities-container {
             position:absolute; bottom:20px; left:50%; transform:translateX(-50%);
@@ -378,7 +394,12 @@
 
         /* ══ MOBILE ══ */
         #mobile-overlay {
-            position:fixed; inset:0; z-index:20;
+            position:fixed; inset:0; z-index:-1;
+            /* -1: ui-layer içindeki diğer kardeşlerin (abilities-container,
+               contract-modal, top-bar) ALTINDA — ama #game-container'ın
+               ÜSTÜNDE kalır (ui-layer kendi context'i içinde konumlanır).
+               Böylece joystick/kamera dokunuşları çalışır, ama UI butonları
+               artık dokunuşları öncelikli yakalar. */
             pointer-events:auto; /* ZORUNLU: dokunma olayları için auto olmalı */
             display:none;
         }
@@ -587,6 +608,7 @@
         </div>
 
         <div id="crosshair">[ + ]</div>
+        <div id="hit-marker"></div>
 
         <div id="abilities-container">
             <button id="btn-interact" class="cyber-btn orange">ARACA BİN [G]</button>
@@ -1192,6 +1214,8 @@ window.onload = function() {
         weaponSlot: 1, // 1=plazma, 2=keskin nişancı
         // Düşme hasarı
         _fallFromY: null, _lastGrounded: true,
+        // Vurdum hissi — mikro hit-stop
+        _hitStopTime: 0,
         // --- ZIPLAMA FİZİĞİ ---
         velocityY: 0,
         isGrounded: true,      // yerde mi?
@@ -2088,25 +2112,39 @@ window.onload = function() {
         addStation('SAHIL', 0.375, 0xff66cc);
 
         function train(start, color) {
-            const g = new THREE.Group();
+            const g = new THREE.Group(); // mantıksal konteyner (görünmez)
+            g._cars = [];
             const bodyMat = new THREE.MeshStandardMaterial({ color:0x101018, metalness:0.65, roughness:0.25, emissive:new THREE.Color(color).multiplyScalar(0.12) });
-            const winMat = new THREE.MeshBasicMaterial({ color:new THREE.Color(color), transparent:true, opacity:0.9, blending:THREE.AdditiveBlending });
+            const winMat  = new THREE.MeshBasicMaterial({ color:new THREE.Color(color), transparent:true, opacity:0.9, blending:THREE.AdditiveBlending });
+            const spacingU = 17 / Math.max(1, cityLife.metroLength);
+
             for(let i=0;i<4;i++) {
                 const car = new THREE.Group();
                 const body = new THREE.Mesh(new THREE.BoxGeometry(3.7, 2.2, 15), bodyMat);
                 car.add(body);
                 for(let w=-2; w<=2; w++) {
                     const win = new THREE.Mesh(new THREE.BoxGeometry(3.8, 0.7, 1.4), winMat);
-                    win.position.set(0,0.35,w*2.5);
-                    car.add(win);
+                    win.position.set(0, 0.35, w*2.5); car.add(win);
                 }
-                car.position.z = i * -17;
-                g.add(car);
+                // Her vagon başlangıç pozisyonu: öndeki vagona göre geride
+                const carU = ((start - i * spacingU) + 1) % 1;
+                car._u = carU;
+                const p = curve.getPointAt(carU);
+                const ahead = curve.getPointAt((carU + 0.002) % 1);
+                const dir = new THREE.Vector3().subVectors(ahead, p).normalize();
+                car.position.copy(p);
+                car.rotation.y = Math.atan2(dir.x, dir.z);
+                scene.add(car);
+                g._cars.push(car);
             }
-            g._curve = curve; g._u = start; g._speed = 30; g._phase = Math.random()*6.28;
-            const p = curve.getPointAt(start);
-            g.position.copy(p);
-            scene.add(g); cityLife.metroTrains.push(g);
+            g._curve  = curve;
+            g._u      = start;
+            g._speed  = 30;
+            g._phase  = Math.random() * 6.28;
+            g.position.copy(g._cars[0].position);
+            g.rotation.y = g._cars[0].rotation.y;
+            scene.add(g);
+            cityLife.metroTrains.push(g);
         }
         train(0.02, 0x00ffff);
         train(0.50, 0xff66cc);
@@ -2531,7 +2569,7 @@ window.onload = function() {
         const proj = new THREE.Mesh(projGeo, isPlayer ? projMatPlayer : projMatEnemy);
         let safeDir = direction.clone(); proj.position.copy(origin).add(safeDir.multiplyScalar(1.5)); 
         proj.quaternion.setFromUnitVectors(new THREE.Vector3(0, 0, 1), safeDir); 
-        proj.velocity = direction.clone().normalize().multiplyScalar(speed); proj.isPlayer = isPlayer; proj.life = 1.0; scene.add(proj); projectiles.push(proj);
+        proj.velocity = direction.clone().normalize().multiplyScalar(speed); proj.isPlayer = isPlayer; proj.life = 1.0; proj._isSniper = (speed > 250); scene.add(proj); projectiles.push(proj);
         
         if(isPlayer) {
             if(!GAME.metroRiding) provokeCity(0.2);
@@ -2553,6 +2591,125 @@ window.onload = function() {
     const enemyEliteMat = new THREE.MeshBasicMaterial({ color: new THREE.Color(2,0,4), wireframe: false }); 
     const enemyInfectedMat = new THREE.MeshBasicMaterial({ color: new THREE.Color(0,4,0), wireframe: false });
     const civMat        = new THREE.MeshBasicMaterial({ color: new THREE.Color(0,2,4), wireframe: true }); 
+
+    // ================================================================
+    // VURDUM HİSSİ — Hit-Feel Sistemi
+    // Kıvılcım parçacıkları + beyaz flaş + tok ses + hitmarker + knockback
+    // ================================================================
+    const hitFlashMat = new THREE.MeshBasicMaterial({ color: 0xffffff, wireframe: false });
+    const hitSparks = [];
+    const _hsBoxGeo = new THREE.BoxGeometry(0.045, 0.045, 1);
+
+    function spawnHitSpark(pos, dir, isSniper) {
+        const group = new THREE.Group();
+        group.position.copy(pos);
+        const sparkCount = isSniper ? 8 : 5;
+        const backDir = dir.clone().negate();
+        for(let i=0; i<sparkCount; i++) {
+            const len = (isSniper ? 0.35 : 0.2) + Math.random() * 0.3;
+            const geo = _hsBoxGeo.clone(); geo.scale(1, 1, len);
+            const col = i % 2 === 0 ? 0xffffff : 0x6affe8;
+            const mat = new THREE.MeshBasicMaterial({ color: col, transparent: true, opacity: 1 });
+            const m = new THREE.Mesh(geo, mat);
+            const spread = new THREE.Vector3((Math.random()-0.5)*1.4, (Math.random()-0.2)*1.2, (Math.random()-0.5)*1.4);
+            const vel = backDir.clone().multiplyScalar(0.7).add(spread).normalize().multiplyScalar(isSniper ? 7 : 4.5);
+            m.userData.vel = vel;
+            m.lookAt(vel); // m henüz parent'a eklenmedi — (0,0,0)'dan vel'e bakış = doğru yön
+            group.add(m);
+        }
+        // Merkezde kısa beyaz flaş (ek ışık)
+        const flash = new THREE.Mesh(new THREE.SphereGeometry(isSniper ? 0.28 : 0.16, 6, 6),
+            new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.95, blending: THREE.AdditiveBlending, depthWrite:false }));
+        flash.userData.isFlash = true;
+        group.add(flash);
+        group.userData.life = isSniper ? 0.22 : 0.16;
+        group.userData.maxLife = group.userData.life;
+        scene.add(group);
+        hitSparks.push(group);
+    }
+
+    function updateHitSparks(gameDt) {
+        for(let i = hitSparks.length - 1; i >= 0; i--) {
+            const hs = hitSparks[i];
+            hs.userData.life -= gameDt;
+            const lifeRatio = Math.max(0, hs.userData.life / hs.userData.maxLife);
+            for(let c of hs.children) {
+                if(c.userData.vel) {
+                    c.position.add(c.userData.vel.clone().multiplyScalar(gameDt));
+                    c.userData.vel.multiplyScalar(0.88); // sürtünme
+                    c.material.opacity = lifeRatio;
+                } else if(c.userData.isFlash) {
+                    const t = 1 - lifeRatio;
+                    const s = 1 + t * 3.5;
+                    c.scale.set(s, s, s);
+                    c.material.opacity = Math.max(0, (1 - t) * 0.95);
+                }
+            }
+            if(hs.userData.life <= 0) { scene.remove(hs); hitSparks.splice(i, 1); }
+        }
+    }
+
+    // --- Tok isabet sesi (impact thud + crack) ---
+    function playImpactSFX(isSniper) {
+        if(!audioCtxSFX) return; const ctx = audioCtxSFX; const t = ctx.currentTime; const out = _sfxGain || ctx.destination;
+        // Tok darbe (sub punch)
+        const thud = ctx.createOscillator(); thud.type = 'triangle';
+        thud.frequency.setValueAtTime(isSniper ? 140 : 190, t);
+        thud.frequency.exponentialRampToValueAtTime(isSniper ? 35 : 48, t + (isSniper ? 0.09 : 0.06));
+        const tg = ctx.createGain(); tg.gain.setValueAtTime(isSniper ? 0.32 : 0.22, t); tg.gain.exponentialRampToValueAtTime(0.001, t + (isSniper ? 0.12 : 0.08));
+        thud.connect(tg); tg.connect(out); thud.start(t); thud.stop(t + 0.14);
+        // İnce metal/elektrik çatırtı (crack)
+        const buf = ctx.createBuffer(1, Math.ceil(ctx.sampleRate * 0.035), ctx.sampleRate);
+        const bd = buf.getChannelData(0); for(let k = 0; k < bd.length; k++) bd[k] = (Math.random()*2-1) * Math.exp(-k/bd.length*9);
+        const src = ctx.createBufferSource(); src.buffer = buf;
+        const f = ctx.createBiquadFilter(); f.type = 'highpass'; f.frequency.value = 3200;
+        const g = ctx.createGain(); g.gain.value = isSniper ? 0.18 : 0.11;
+        src.connect(f); f.connect(g); g.connect(out); src.start(t); src.stop(t + 0.04);
+        // Sniper için ek metalik rezonans
+        if(isSniper) {
+            const ring = ctx.createOscillator(); ring.type = 'square'; ring.frequency.value = 2100;
+            const rg = ctx.createGain(); rg.gain.setValueAtTime(0.045, t); rg.gain.exponentialRampToValueAtTime(0.001, t + 0.14);
+            const rf = ctx.createBiquadFilter(); rf.type = 'bandpass'; rf.frequency.value = 2400; rf.Q.value = 3;
+            ring.connect(rf); rf.connect(rg); rg.connect(out); ring.start(t); ring.stop(t + 0.15);
+        }
+    }
+
+    // --- Hitmarker (crosshair üzeri çarpı) ---
+    function showHitMarker(isKill) {
+        const hm = document.getElementById('hit-marker');
+        if(!hm) return;
+        hm.classList.remove('show', 'kill');
+        void hm.offsetWidth; // reflow — animasyonu yeniden başlat
+        if(isKill) hm.classList.add('kill');
+        hm.classList.add('show');
+        clearTimeout(hm._hideTimer);
+        hm._hideTimer = setTimeout(() => hm.classList.remove('show'), 160);
+    }
+
+    // --- Vuruş anında: spark + ses + hitmarker + flaş + knockback + mikro hit-stop + kamera kick ---
+    function registerHit(target, hitPos, hitDir, isSniper, isKill) {
+        spawnHitSpark(hitPos, hitDir, isSniper);
+        playImpactSFX(isSniper);
+        showHitMarker(isKill);
+        // Mikro hit-stop — sniper ve kill'lerde daha belirgin
+        GAME._hitStopTime = isKill ? 0.05 : (isSniper ? 0.045 : 0.03);
+        // Hafif kamera kick
+        GAME.shakeTime = Math.max(GAME.shakeTime, isKill ? 0.09 : 0.06);
+        // Knockback — hedefi vuruş yönünde hafifçe it
+        if(target && target.position) {
+            const kb = hitDir.clone().multiplyScalar(isSniper ? 0.35 : 0.16);
+            target.position.add(kb);
+        }
+        // Beyaz flaş — kısa süreliğine hedefin materyalini değiştir (proxy setter kullanır)
+        if(target && !target.isInfected && 'material' in target) {
+            const restore = target._mat || target.material;
+            target.material = hitFlashMat;
+            setTimeout(() => {
+                if(!target || target.isInfected) return;
+                target.material = restore;
+            }, 70);
+        }
+    }
 
     // =========================================================
     // DETAYLI KARAKTER BUILDER
@@ -3135,15 +3292,25 @@ window.onload = function() {
             if(p.kind === 'sign') p.mesh.material.opacity = 0.62 + Math.sin(now*0.004 + p.phase)*0.18;
         });
         cityLife.metroTrains.forEach(train => {
-            if(train._curve) {
-                train._u = (train._u + (train._speed * dt / Math.max(1, cityLife.metroLength))) % 1;
-                const p = train._curve.getPointAt(train._u);
-                const ahead = train._curve.getPointAt((train._u + 0.006) % 1);
-                const dir = new THREE.Vector3().subVectors(ahead, p).normalize();
-                train.position.copy(p);
-                train.position.y += Math.sin(now*0.004 + train._phase) * 0.03;
-                train.rotation.y = Math.atan2(dir.x, dir.z);
+            if(!train._curve || !train._cars) return;
+            const spacingU = 17 / Math.max(1, cityLife.metroLength);
+            // Önde gelen vagonun u'sunu ilerlet
+            train._u = (train._u + (train._speed * dt / Math.max(1, cityLife.metroLength))) % 1;
+            // Her vagon bağımsız olarak eğriyi takip eder
+            for(let i=0; i<train._cars.length; i++) {
+                const car = train._cars[i];
+                car._u = ((train._u - i * spacingU) + 1) % 1;
+                const p    = train._curve.getPointAt(car._u);
+                const fwdU = (car._u + 0.003) % 1;
+                const pAhead = train._curve.getPointAt(fwdU);
+                const dir  = new THREE.Vector3().subVectors(pAhead, p).normalize();
+                car.position.copy(p);
+                car.position.y += Math.sin(now*0.004 + train._phase + i*0.4) * 0.025;
+                car.rotation.y = Math.atan2(dir.x, dir.z);
             }
+            // Grup pozisyonu = öncü vagonun pozisyonu (biniş/kamera için)
+            train.position.copy(train._cars[0].position);
+            train.rotation.y = train._cars[0].rotation.y;
         });
         cityLife.airTraffic.forEach(car => {
             car.position.x += car._speed * dt;
@@ -4262,6 +4429,18 @@ window.onload = function() {
         if(GAME.mode==='FPS' && !GAME.isMobile) document.body.requestPointerLock();
     }
 
+    // Ray üzerinde durabilme — dikdörtgen rota segmentlerini kontrol et
+    // Ray merkezi y=13.5, tüp yarıçapı=0.42 → oyuncu tepe noktası 13.92
+    const RAIL_Y = 13.5 + 0.42 + 0.2; // 14.12 — bini marjı
+    function isOnRail(px, pz) {
+        const R = 0.75; // yatay tolerans (tüp yarıçapı + küçük pay)
+        if(Math.abs(pz - (-330)) < R && px > -332 && px < 332) return true;
+        if(Math.abs(px -   330)  < R && pz > -332 && pz < 332) return true;
+        if(Math.abs(pz -   330)  < R && px > -332 && px < 332) return true;
+        if(Math.abs(px - (-330)) < R && pz > -332 && pz < 332) return true;
+        return false;
+    }
+
     function checkRooftopFall() {
         if(!GAME.onRooftop) return;
         // Oyuncu teras zemininin 8m altına düştüyse teras modundan çık
@@ -4706,7 +4885,14 @@ window.onload = function() {
                 }
             }
 
-            const gameDt = dt * GAME.timeScale; 
+            // gameDt — Zaman Büküm + mikro Hit-Stop
+            let gameDt;
+            if(GAME._hitStopTime > 0) {
+                GAME._hitStopTime -= dt;
+                gameDt = dt * GAME.timeScale * 0.05; // ~30ms'lik mikro donma → "vurdum" hissi
+            } else {
+                gameDt = dt * GAME.timeScale;
+            }
 
             for(let h of holograms) { h.rotation.y += gameDt; h.material.opacity = 0.5 + Math.sin(now*0.005)*0.3; }
             updateCityLife(gameDt, now);
@@ -4879,6 +5065,7 @@ window.onload = function() {
                     const _pz = playerMesh.position.z;
                     const _py = playerMesh.position.y;
                     let bestGroundY = 0.2; // varsayılan: ana zemin
+                    let _onRooftopSurface = false;
 
                     if(onVehicle) {
                         bestGroundY = vehicleRoofY;
@@ -4893,14 +5080,22 @@ window.onload = function() {
                                 // Çatı oyuncunun altında ya da iniş toleransı içinde (2.5 birim)
                                 if(roofY <= _py + 2.5 && roofY > bestGroundY) {
                                     bestGroundY = roofY;
+                                    _onRooftopSurface = true;
                                 }
                             }
+                        }
+                        // Metro rayı — rijit zemin (görsel değişiklik yok, sadece çarpışma)
+                        // Teras → ray atlayışı çok yüksekten gelebilir (40m+), o yüzden
+                        // geniş bir düşme toleransı kullanılır.
+                        if(isOnRail(_px, _pz) && RAIL_Y <= _py + 35 && RAIL_Y > bestGroundY) {
+                            bestGroundY = RAIL_Y;
+                            _onRooftopSurface = false; // ray bir teras değil, sniper perk yok
                         }
                     }
                     GAME.groundY = bestGroundY;
 
-                    // onRooftop durumunu groundY'den otomatik türet
-                    const _onBuilding = bestGroundY > 1.5 && !onVehicle;
+                    // onRooftop durumunu groundY'den otomatik türet (sadece bina çatısı için)
+                    const _onBuilding = _onRooftopSurface && !onVehicle;
                     if(_onBuilding) {
                         GAME.onRooftop = true;
                         GAME.rooftopY  = bestGroundY - 0.2;
@@ -5052,16 +5247,26 @@ window.onload = function() {
                     if(p.isPlayer) {
                         for(let j=enemies.length-1; j>=0; j--) {
                             if(p.position.distanceTo(enemies[j].position) < 1.5) {
-                                enemies[j].hp -= (GAME.mode === 'FPS' ? 50 : 34); hit = true;
-                                if(!enemies[j].isInfected) { enemies[j].material = playerMat; setTimeout(() => { if(enemies[j] && !enemies[j].isInfected) enemies[j].material = enemies[j].isElite ? enemyEliteMat : enemyMat; }, 100); }
-                                if(enemies[j].hp <= 0) { let deathPos = enemies[j].position.clone(); scene.remove(enemies[j]); enemies.splice(j, 1); onEnemyKilled(deathPos); } break;
+                                const target = enemies[j];
+                                const dmg = (GAME.mode === 'FPS' ? 50 : 34);
+                                target.hp -= dmg; hit = true;
+                                const isKillShot = target.hp <= 0;
+                                const hitDir = p.velocity.clone().normalize();
+                                const hitPos = p.position.clone();
+                                if(!target.isInfected) registerHit(target, hitPos, hitDir, p._isSniper, isKillShot);
+                                if(isKillShot) { let deathPos = target.position.clone(); scene.remove(target); enemies.splice(j, 1); onEnemyKilled(deathPos); } break;
                             }
                         }
                         if (!hit) {
                             for(let j=civilians.length-1; j>=0; j--) {
                                 if(p.position.distanceTo(civilians[j].position) < 1.5) {
+                                    const target = civilians[j];
                                     civilians[j].hp -= (GAME.mode === 'FPS' ? 100 : 50); hit = true; 
-                                    if(civilians[j].hp <= 0) {
+                                    const isKillShot = civilians[j].hp <= 0;
+                                    const hitDir = p.velocity.clone().normalize();
+                                    const hitPos = p.position.clone();
+                                    registerHit(target, hitPos, hitDir, p._isSniper, isKillShot);
+                                    if(isKillShot) {
                                         let isBounty = civilians[j].isBountyTarget;
                                         scene.remove(civilians[j]); civilians.splice(j, 1);
                                         if(isBounty) { onBountyTargetKilled(); } else { onCivilianKilled(); }
@@ -5081,6 +5286,7 @@ window.onload = function() {
                 }
                 if (p.life <= 0 || hit) { scene.remove(p); projectiles.splice(i, 1); }
             }
+            updateHitSparks(gameDt);
 
             for (let i=0; i<enemies.length; i++) {
                 let e = enemies[i];
