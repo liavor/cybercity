@@ -164,6 +164,7 @@
             background:rgba(2,6,18,0.97); border:1px solid var(--c-border);
             border-top:2px solid var(--c-jade); padding:24px 26px;
             font-family:var(--font-mono); pointer-events:auto;
+            z-index:30; /* overlay üzerinde — tablet dokunuşu çalışır */
             clip-path:polygon(0 0,calc(100% - 14px) 0,100% 14px,100% 100%,14px 100%,0 calc(100% - 14px));
             box-shadow:0 0 40px rgba(79,232,200,0.08);
         }
@@ -208,6 +209,7 @@
         #abilities-container {
             position:absolute; bottom:20px; left:50%; transform:translateX(-50%);
             display:flex; gap:6px; align-items:center; pointer-events:auto;
+            z-index:30; /* overlay (z-index:20) üzerinde kalır — tabletde tıklanabilir */
         }
         .cyber-btn {
             padding:9px 16px; font-family:var(--font-mono); font-size:11px;
@@ -394,13 +396,8 @@
 
         /* ══ MOBILE ══ */
         #mobile-overlay {
-            position:fixed; inset:0; z-index:-1;
-            /* -1: ui-layer içindeki diğer kardeşlerin (abilities-container,
-               contract-modal, top-bar) ALTINDA — ama #game-container'ın
-               ÜSTÜNDE kalır (ui-layer kendi context'i içinde konumlanır).
-               Böylece joystick/kamera dokunuşları çalışır, ama UI butonları
-               artık dokunuşları öncelikli yakalar. */
-            pointer-events:auto; /* ZORUNLU: dokunma olayları için auto olmalı */
+            position:fixed; inset:0; z-index:20;
+            pointer-events:auto;
             display:none;
         }
         #dynamic-joy-bg {
