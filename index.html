@@ -2150,608 +2150,251 @@ window.onload = function() {
     createShorelineLife();
     createDistantMetropolis();
     createMetroSystem();
-    const CAR_PALETTES = [
-        { body: 0x0a0a1a, trim: 0x00aaff, glass: 0x001833, neon: new THREE.Color(0,2,4) },  // koyu mavi / cyan
-        { body: 0x1a0505, trim: 0xff2200, glass: 0x1a0000, neon: new THREE.Color(3,0,0) },  // koyu kırmızı / kızıl
-        { body: 0x080808, trim: 0xaa00ff, glass: 0x0a0010, neon: new THREE.Color(1.5,0,3) },// siyah / mor
-        { body: 0x001a0a, trim: 0x00ff88, glass: 0x001a08, neon: new THREE.Color(0,3,1) },  // koyu yeşil / neon
-        { body: 0x1a1000, trim: 0xff8800, glass: 0x120a00, neon: new THREE.Color(3,1,0) },  // koyu turuncu
-        { body: 0x101010, trim: 0xffffff, glass: 0x080808, neon: new THREE.Color(2,2,2) },  // siyah / gümüş
+    // ================================================================
+    // ARAÇ TİPLERİ — 5 farklı çeşit
+    // ================================================================
+    const PALETTES_SEDAN  = [
+        { body:0x0a0a1a, trim:0x00aaff, glass:0x001833, neon:new THREE.Color(0,2,4)   },
+        { body:0x1a0505, trim:0xff2200, glass:0x1a0000, neon:new THREE.Color(3,0,0)   },
+        { body:0x080808, trim:0xaa00ff, glass:0x0a0010, neon:new THREE.Color(1.5,0,3) },
+        { body:0x001a0a, trim:0x00ff88, glass:0x001a08, neon:new THREE.Color(0,3,1)   },
+        { body:0x1a1000, trim:0xff8800, glass:0x120a00, neon:new THREE.Color(3,1,0)   },
+        { body:0x101010, trim:0xffffff, glass:0x080808, neon:new THREE.Color(2,2,2)   },
+    ];
+    const PALETTES_SPORT  = [
+        { body:0x2a0000, trim:0xff0022, glass:0x1a0000, neon:new THREE.Color(4,0,0.2) },
+        { body:0x0a1a2a, trim:0x00ccff, glass:0x000a18, neon:new THREE.Color(0,2.5,4) },
+        { body:0x1a1a00, trim:0xffee00, glass:0x0e0e00, neon:new THREE.Color(3,3,0)   },
+        { body:0x0d0d0d, trim:0xffffff, glass:0x050505, neon:new THREE.Color(2,2,2.5) },
+    ];
+    const PALETTES_VAN    = [
+        { body:0x1c1c1c, trim:0x446644, glass:0x0a0a0a, neon:new THREE.Color(0,0.8,0.3)  },
+        { body:0x1a1208, trim:0x886633, glass:0x0a0802, neon:new THREE.Color(1.2,0.7,0)   },
+        { body:0x0f1418, trim:0x334455, glass:0x050a10, neon:new THREE.Color(0.2,0.5,1)   },
+        { body:0x181818, trim:0x555555, glass:0x080808, neon:new THREE.Color(0.5,0.5,0.5) },
+    ];
+    const PALETTES_MUSCLE = [
+        { body:0x0a0000, trim:0xcc0000, glass:0x060000, neon:new THREE.Color(2.5,0,0)  },
+        { body:0x050505, trim:0xcccccc, glass:0x050505, neon:new THREE.Color(1.5,1.5,2) },
+        { body:0x0a0800, trim:0xcc8800, glass:0x060400, neon:new THREE.Color(2.5,1.5,0) },
+        { body:0x000a0a, trim:0x00ccaa, glass:0x000606, neon:new THREE.Color(0,2,1.8)   },
+    ];
+    const PALETTES_COMPACT= [
+        { body:0x101828, trim:0x5599cc, glass:0x060c14, neon:new THREE.Color(0.5,1.2,2)   },
+        { body:0x181810, trim:0xaaaa44, glass:0x0c0c04, neon:new THREE.Color(1.2,1.2,0.3) },
+        { body:0x181818, trim:0x888888, glass:0x0a0a0a, neon:new THREE.Color(0.8,0.8,0.9) },
+        { body:0x0a1008, trim:0x44aa55, glass:0x040a03, neon:new THREE.Color(0.3,1.5,0.5) },
     ];
 
-    function createDetailedCar(palette, isParked) {
-        const g = new THREE.Group();
-        const P = palette;
-        const bodyMat  = new THREE.MeshStandardMaterial({ color: P.body,  metalness: 0.92, roughness: 0.15 });
-        const trimMat  = new THREE.MeshStandardMaterial({ color: P.trim,  metalness: 1.0,  roughness: 0.05, emissive: new THREE.Color(P.trim).multiplyScalar(0.3) });
-        const glassMat = new THREE.MeshStandardMaterial({ color: P.glass, metalness: 0.1,  roughness: 0.0,  transparent: true, opacity: 0.55 });
-        const darkMat  = new THREE.MeshStandardMaterial({ color: 0x050505, metalness: 0.8,  roughness: 0.3  });
-        const rubberMat= new THREE.MeshStandardMaterial({ color: 0x111111, metalness: 0.0,  roughness: 0.95 });
-        const rimMat   = new THREE.MeshStandardMaterial({ color: 0x888888, metalness: 1.0,  roughness: 0.1  });
-        const lightMat = new THREE.MeshBasicMaterial({ color: isParked ? noGlow : glowCyan });
-        const tailMat  = new THREE.MeshBasicMaterial({ color: isParked ? noGlow : glowRed  });
-        const neonMat  = new THREE.MeshBasicMaterial({ color: P.neon, transparent: true, opacity: isParked ? 0.4 : 0.85 });
+    const _rubberMat = new THREE.MeshStandardMaterial({ color:0x111111, metalness:0, roughness:0.95 });
+    const _rimMat    = new THREE.MeshStandardMaterial({ color:0x888888, metalness:1, roughness:0.1  });
+    const _darkMat2  = new THREE.MeshStandardMaterial({ color:0x050505, metalness:0.8, roughness:0.3 });
 
-        // --- ANA GÖVDE ---
-        // Alt kısım (geniş)
-        const lowerBody = new THREE.Mesh(new THREE.BoxGeometry(2.5, 0.7, 5.0), bodyMat);
-        lowerBody.position.y = 0.45; g.add(lowerBody);
-        // Üst kabin
-        const cabin = new THREE.Mesh(new THREE.BoxGeometry(2.1, 0.65, 2.6), bodyMat);
-        cabin.position.set(0, 1.15, -0.1); g.add(cabin);
-        // Ön kaput eğimi
-        const hood = new THREE.Mesh(new THREE.BoxGeometry(2.4, 0.12, 1.4), bodyMat);
-        hood.position.set(0, 0.86, -1.6); hood.rotation.x = 0.18; g.add(hood);
-        // Arka bagaj
-        const trunk = new THREE.Mesh(new THREE.BoxGeometry(2.4, 0.18, 0.9), bodyMat);
-        trunk.position.set(0, 0.88, 1.75); g.add(trunk);
-        // Ön tampon
-        const fBumper = new THREE.Mesh(new THREE.BoxGeometry(2.5, 0.28, 0.18), darkMat);
-        fBumper.position.set(0, 0.28, -2.59); g.add(fBumper);
-        // Arka tampon
-        const rBumper = new THREE.Mesh(new THREE.BoxGeometry(2.5, 0.28, 0.18), darkMat);
-        rBumper.position.set(0, 0.28, 2.59); g.add(rBumper);
-        // Trim şeridi (iki yanda)
-        [-1.26, 1.26].forEach(x => {
-            const trim = new THREE.Mesh(new THREE.BoxGeometry(0.06, 0.08, 4.6), trimMat);
-            trim.position.set(x, 0.6, 0); g.add(trim);
-        });
-        // Ön ızgara
-        const grill = new THREE.Mesh(new THREE.BoxGeometry(1.6, 0.22, 0.08), darkMat);
-        grill.position.set(0, 0.5, -2.52); g.add(grill);
-        const grillAccent = new THREE.Mesh(new THREE.BoxGeometry(1.5, 0.06, 0.1), trimMat);
-        grillAccent.position.set(0, 0.5, -2.52); g.add(grillAccent);
-
-        // --- CAM ---
-        // Ön cam
-        const windshield = new THREE.Mesh(new THREE.BoxGeometry(1.95, 0.55, 0.08), glassMat);
-        windshield.position.set(0, 1.12, -1.3); windshield.rotation.x = -0.35; g.add(windshield);
-        // Arka cam
-        const rearWin = new THREE.Mesh(new THREE.BoxGeometry(1.9, 0.45, 0.08), glassMat);
-        rearWin.position.set(0, 1.1, 1.1); rearWin.rotation.x = 0.35; g.add(rearWin);
-        // Yan camlar
-        [-1.06, 1.06].forEach(x => {
-            const sw = new THREE.Mesh(new THREE.BoxGeometry(0.06, 0.38, 1.1), glassMat);
-            sw.position.set(x, 1.15, -0.18); g.add(sw);
-        });
-
-        // --- FARLAR (ön) ---
-        const fLightL = new THREE.Mesh(new THREE.BoxGeometry(0.65, 0.18, 0.12), lightMat);
-        fLightL.name = "headlight"; fLightL.position.set(-0.85, 0.72, -2.52); g.add(fLightL);
-        const fLightR = new THREE.Mesh(new THREE.BoxGeometry(0.65, 0.18, 0.12), lightMat);
-        fLightR.name = "headlight"; fLightR.position.set(0.85, 0.72, -2.52); g.add(fLightR);
-        // Far lens halkası
-        [-0.85, 0.85].forEach(x => {
-            const ring = new THREE.Mesh(new THREE.BoxGeometry(0.62, 0.04, 0.1), trimMat);
-            ring.position.set(x, 0.82, -2.52); g.add(ring);
-        });
-
-        // --- STOP LAMBALARI (arka) ---
-        const tLightL = new THREE.Mesh(new THREE.BoxGeometry(0.65, 0.2, 0.12), tailMat);
-        tLightL.name = "taillight"; tLightL.position.set(-0.85, 0.72, 2.52); g.add(tLightL);
-        const tLightR = new THREE.Mesh(new THREE.BoxGeometry(0.65, 0.2, 0.12), tailMat);
-        tLightR.name = "taillight"; tLightR.position.set(0.85, 0.72, 2.52); g.add(tLightR);
-
-        // --- TEKERLEKLER (4 adet) ---
-        const wheelPositions = [
-            { x: -1.3, z: -1.55 }, { x: 1.3, z: -1.55 },
-            { x: -1.3, z:  1.55 }, { x: 1.3, z:  1.55 },
-        ];
+    function _makeWheels(g, wps, tR, tW) {
         g._wheels = [];
-        wheelPositions.forEach(wp => {
+        wps.forEach(wp => {
             const wg = new THREE.Group();
-            // Lastik
-            const tire = new THREE.Mesh(new THREE.CylinderGeometry(0.42, 0.42, 0.28, 14), rubberMat);
-            tire.rotation.z = Math.PI / 2; wg.add(tire);
-            // Jant
-            const rim = new THREE.Mesh(new THREE.CylinderGeometry(0.26, 0.26, 0.3, 10), rimMat);
-            rim.rotation.z = Math.PI / 2; wg.add(rim);
-            // Jant delik detayı
-            for(let s=0; s<5; s++) {
-                const spoke = new THREE.Mesh(new THREE.BoxGeometry(0.04, 0.22, 0.32), rimMat);
-                spoke.rotation.z = (s / 5) * Math.PI * 2; wg.add(spoke);
+            const tire = new THREE.Mesh(new THREE.CylinderGeometry(tR,tR,tW,12), _rubberMat);
+            tire.rotation.z = Math.PI/2; wg.add(tire);
+            const rim = new THREE.Mesh(new THREE.CylinderGeometry(tR*0.6,tR*0.6,tW+0.02,8), _rimMat);
+            rim.rotation.z = Math.PI/2; wg.add(rim);
+            for(let s=0;s<5;s++){
+                const sp=new THREE.Mesh(new THREE.BoxGeometry(0.035,tR*0.52,tW+0.02),_rimMat);
+                sp.rotation.z=(s/5)*Math.PI*2; wg.add(sp);
             }
-            wg.position.set(wp.x, 0.42, wp.z);
+            wg.position.set(wp.x, wp.y !== undefined ? wp.y : tR, wp.z);
             g.add(wg); g._wheels.push(wg);
         });
-
-        // --- NEON UNDERGLOW ---
-        const neonUnder = new THREE.Mesh(new THREE.BoxGeometry(2.3, 0.04, 4.6), neonMat);
-        neonUnder.position.y = 0.04; g.add(neonUnder);
-
-        // --- EGZOZ ---
-        const exh = new THREE.Mesh(new THREE.CylinderGeometry(0.07, 0.09, 0.35, 8), darkMat);
-        exh.rotation.x = Math.PI/2; exh.position.set(0.7, 0.22, 2.62); g.add(exh);
-
-        // --- ROOT Y offset — araçlar zeminde oturur ---
-        g.position.y = -0.5;
-        return g;
     }
 
-    // =========================================================
-    // TİP 2 — SPOR ARABA (alçak, geniş, agresif)
-    // =========================================================
-    function createSportsCar(palette, isParked) {
-        const g = new THREE.Group();
-        const P = palette;
-        const bodyMat  = new THREE.MeshStandardMaterial({ color: P.body, metalness: 0.96, roughness: 0.08 });
-        const trimMat  = new THREE.MeshStandardMaterial({ color: P.trim, metalness: 1.0,  roughness: 0.04, emissive: new THREE.Color(P.trim).multiplyScalar(0.4) });
-        const glassMat = new THREE.MeshStandardMaterial({ color: P.glass, metalness: 0.15, roughness: 0.0, transparent: true, opacity: 0.45 });
-        const darkMat  = new THREE.MeshStandardMaterial({ color: 0x040404, metalness: 0.85, roughness: 0.2 });
-        const rubberMat= new THREE.MeshStandardMaterial({ color: 0x0d0d0d, metalness: 0.0,  roughness: 0.98 });
-        const rimMat   = new THREE.MeshStandardMaterial({ color: P.trim,  metalness: 1.0,  roughness: 0.06 });
-        const lightMat = new THREE.MeshBasicMaterial({ color: isParked ? noGlow : glowCyan });
-        const tailMat  = new THREE.MeshBasicMaterial({ color: isParked ? noGlow : glowRed });
-        const neonMat  = new THREE.MeshBasicMaterial({ color: P.neon, transparent: true, opacity: isParked ? 0.35 : 0.9 });
+    // ─── TİP 0: SEDAN ───────────────────────────────────────────────
+    function buildSedan(P, isParked) {
+        const g=new THREE.Group();
+        const bM=new THREE.MeshStandardMaterial({color:P.body,metalness:0.92,roughness:0.15});
+        const tM=new THREE.MeshStandardMaterial({color:P.trim,metalness:1,roughness:0.05,emissive:new THREE.Color(P.trim).multiplyScalar(0.3)});
+        const gM=new THREE.MeshStandardMaterial({color:P.glass,metalness:0.1,roughness:0,transparent:true,opacity:0.55});
+        const nM=new THREE.MeshBasicMaterial({color:P.neon,transparent:true,opacity:isParked?0.4:0.85});
+        const lM=new THREE.MeshBasicMaterial({color:isParked?noGlow:glowCyan});
+        const rM=new THREE.MeshBasicMaterial({color:isParked?noGlow:glowRed});
+        const lb=new THREE.Mesh(new THREE.BoxGeometry(2.5,0.7,5.0),bM); lb.position.y=0.45; g.add(lb);
+        const cb=new THREE.Mesh(new THREE.BoxGeometry(2.1,0.65,2.6),bM); cb.position.set(0,1.15,-0.1); g.add(cb);
+        const hd=new THREE.Mesh(new THREE.BoxGeometry(2.4,0.12,1.4),bM); hd.position.set(0,0.86,-1.6); hd.rotation.x=0.18; g.add(hd);
+        const tr=new THREE.Mesh(new THREE.BoxGeometry(2.4,0.18,0.9),bM); tr.position.set(0,0.88,1.75); g.add(tr);
+        const fb=new THREE.Mesh(new THREE.BoxGeometry(2.5,0.28,0.18),_darkMat2); fb.position.set(0,0.28,-2.59); g.add(fb);
+        const rb2=new THREE.Mesh(new THREE.BoxGeometry(2.5,0.28,0.18),_darkMat2); rb2.position.set(0,0.28,2.59); g.add(rb2);
+        [-1.26,1.26].forEach(x=>{const t=new THREE.Mesh(new THREE.BoxGeometry(0.06,0.08,4.6),tM);t.position.set(x,0.6,0);g.add(t);});
+        const gr=new THREE.Mesh(new THREE.BoxGeometry(1.6,0.22,0.08),_darkMat2); gr.position.set(0,0.5,-2.52); g.add(gr);
+        const ws=new THREE.Mesh(new THREE.BoxGeometry(1.95,0.55,0.08),gM); ws.position.set(0,1.12,-1.3); ws.rotation.x=-0.35; g.add(ws);
+        const rw=new THREE.Mesh(new THREE.BoxGeometry(1.9,0.45,0.08),gM); rw.position.set(0,1.1,1.1); rw.rotation.x=0.35; g.add(rw);
+        [-1.06,1.06].forEach(x=>{const sw=new THREE.Mesh(new THREE.BoxGeometry(0.06,0.38,1.1),gM);sw.position.set(x,1.15,-0.18);g.add(sw);});
+        const fll=new THREE.Mesh(new THREE.BoxGeometry(0.65,0.18,0.12),lM); fll.name="headlight"; fll.position.set(-0.85,0.72,-2.52); g.add(fll);
+        const flr=new THREE.Mesh(new THREE.BoxGeometry(0.65,0.18,0.12),lM); flr.name="headlight"; flr.position.set(0.85,0.72,-2.52); g.add(flr);
+        const tll=new THREE.Mesh(new THREE.BoxGeometry(0.65,0.2,0.12),rM); tll.name="taillight"; tll.position.set(-0.85,0.72,2.52); g.add(tll);
+        const tlr=new THREE.Mesh(new THREE.BoxGeometry(0.65,0.2,0.12),rM); tlr.name="taillight"; tlr.position.set(0.85,0.72,2.52); g.add(tlr);
+        const nu=new THREE.Mesh(new THREE.BoxGeometry(2.3,0.04,4.6),nM); nu.position.y=0.04; g.add(nu);
+        _makeWheels(g,[{x:-1.3,z:-1.55},{x:1.3,z:-1.55},{x:-1.3,z:1.55},{x:1.3,z:1.55}],0.42,0.28);
+        const ex=new THREE.Mesh(new THREE.CylinderGeometry(0.07,0.09,0.35,8),_darkMat2); ex.rotation.x=Math.PI/2; ex.position.set(0.7,0.22,2.62); g.add(ex);
+        g.position.y=-0.5; return g;
+    }
 
-        // Alt gövde — alçak ve çok geniş
-        const lowerBody = new THREE.Mesh(new THREE.BoxGeometry(2.8, 0.5, 5.4), bodyMat);
-        lowerBody.position.y = 0.32; g.add(lowerBody);
-        // Düşük kuyruklu kabin (coupe tarzı)
-        const cabin = new THREE.Mesh(new THREE.BoxGeometry(2.2, 0.55, 2.1), bodyMat);
-        cabin.position.set(0, 0.88, 0.3); g.add(cabin);
-        // Uzun, eğimli ön kaput
-        const hood = new THREE.Mesh(new THREE.BoxGeometry(2.7, 0.1, 1.9), bodyMat);
-        hood.position.set(0, 0.62, -1.85); hood.rotation.x = 0.22; g.add(hood);
+    // ─── TİP 1: SPOR ARABA ──────────────────────────────────────────
+    function buildSport(P, isParked) {
+        const g=new THREE.Group();
+        const bM=new THREE.MeshStandardMaterial({color:P.body,metalness:0.96,roughness:0.08});
+        const tM=new THREE.MeshStandardMaterial({color:P.trim,metalness:1,roughness:0.02,emissive:new THREE.Color(P.trim).multiplyScalar(0.5)});
+        const gM=new THREE.MeshStandardMaterial({color:P.glass,metalness:0.1,roughness:0,transparent:true,opacity:0.45});
+        const nM=new THREE.MeshBasicMaterial({color:P.neon,transparent:true,opacity:isParked?0.5:1.0,blending:THREE.AdditiveBlending});
+        const lM=new THREE.MeshBasicMaterial({color:isParked?noGlow:glowCyan});
+        const rM=new THREE.MeshBasicMaterial({color:isParked?noGlow:glowRed});
+        // Alçak geniş gövde
+        const low=new THREE.Mesh(new THREE.BoxGeometry(3.2,0.45,6.0),bM); low.position.y=0.3; g.add(low);
+        const cab=new THREE.Mesh(new THREE.BoxGeometry(2.4,0.5,2.2),bM); cab.position.set(0,0.92,0); g.add(cab);
+        const fhd=new THREE.Mesh(new THREE.BoxGeometry(3.0,0.08,2.4),bM); fhd.position.set(0,0.6,-2.2); fhd.rotation.x=0.12; g.add(fhd);
+        const diff=new THREE.Mesh(new THREE.BoxGeometry(3.1,0.22,0.3),tM); diff.position.set(0,0.22,3.05); g.add(diff);
         // Spoiler
-        const spoiler = new THREE.Mesh(new THREE.BoxGeometry(2.6, 0.12, 0.55), bodyMat);
-        spoiler.position.set(0, 0.9, 2.6); g.add(spoiler);
-        const spoilerLegL = new THREE.Mesh(new THREE.BoxGeometry(0.08, 0.35, 0.12), darkMat);
-        spoilerLegL.position.set(-1.1, 0.7, 2.6); g.add(spoilerLegL);
-        const spoilerLegR = spoilerLegL.clone(); spoilerLegR.position.x = 1.1; g.add(spoilerLegR);
-        // Ön splitter
-        const splitter = new THREE.Mesh(new THREE.BoxGeometry(2.8, 0.06, 0.4), darkMat);
-        splitter.position.set(0, 0.12, -2.8); g.add(splitter);
-        // Yan hava girişleri
-        [-1.41, 1.41].forEach(x => {
-            const vent = new THREE.Mesh(new THREE.BoxGeometry(0.08, 0.14, 0.5), darkMat);
-            vent.position.set(x, 0.55, -1.2); g.add(vent);
-            const trim = new THREE.Mesh(new THREE.BoxGeometry(0.06, 0.06, 4.9), trimMat);
-            trim.position.set(x, 0.45, 0); g.add(trim);
-        });
-        // Ön cam (düşük açılı)
-        const wind = new THREE.Mesh(new THREE.BoxGeometry(2.05, 0.48, 0.08), glassMat);
-        wind.position.set(0, 0.88, -0.82); wind.rotation.x = -0.6; g.add(wind);
-        // Arka cam
-        const rWin = new THREE.Mesh(new THREE.BoxGeometry(2.0, 0.38, 0.08), glassMat);
-        rWin.position.set(0, 0.88, 1.4); rWin.rotation.x = 0.52; g.add(rWin);
-        // Farlar (ince çizgi tarzı)
-        [-1.0, 1.0].forEach((x,i) => {
-            const fl = new THREE.Mesh(new THREE.BoxGeometry(0.75, 0.1, 0.1), lightMat);
-            fl.position.set(x * (i===0?1:-1), 0.6, -2.72); g.add(fl);
-            const tl = new THREE.Mesh(new THREE.BoxGeometry(0.75, 0.1, 0.1), tailMat);
-            tl.position.set(x * (i===0?1:-1), 0.6, 2.72); g.add(tl);
-        });
-        // DRL çizgisi
-        const drl = new THREE.Mesh(new THREE.BoxGeometry(2.4, 0.05, 0.08), trimMat);
-        drl.position.set(0, 0.72, -2.72); g.add(drl);
-        // Tekerlekler (büyük, geniş)
-        g._wheels = [];
-        [{ x:-1.42, z:-1.7 },{ x:1.42, z:-1.7 },{ x:-1.42, z:1.7 },{ x:1.42, z:1.7 }].forEach(wp => {
-            const wg = new THREE.Group();
-            const tire = new THREE.Mesh(new THREE.CylinderGeometry(0.45, 0.45, 0.36, 16), rubberMat);
-            tire.rotation.z = Math.PI/2; wg.add(tire);
-            const rim = new THREE.Mesh(new THREE.CylinderGeometry(0.3, 0.3, 0.37, 12), rimMat);
-            rim.rotation.z = Math.PI/2; wg.add(rim);
-            for(let s=0;s<6;s++){
-                const sp = new THREE.Mesh(new THREE.BoxGeometry(0.04, 0.26, 0.38), rimMat);
-                sp.rotation.z = (s/6)*Math.PI*2; wg.add(sp);
-            }
-            wg.position.set(wp.x, 0.45, wp.z); g.add(wg); g._wheels.push(wg);
-        });
-        // Çift egzoz
-        [-0.5, 0.5].forEach(ex => {
-            const exh = new THREE.Mesh(new THREE.CylinderGeometry(0.06, 0.08, 0.3, 8), darkMat);
-            exh.rotation.x = Math.PI/2; exh.position.set(ex, 0.18, 2.74); g.add(exh);
-        });
-        // Neon underglow (ince)
-        const neon = new THREE.Mesh(new THREE.BoxGeometry(2.6, 0.03, 5.1), neonMat);
-        neon.position.y = 0.03; g.add(neon);
-        g.position.y = -0.5;
-        g._speedMin = 35; g._speedMax = 60; g._type = 'sports';
-        return g;
+        const spb=new THREE.Mesh(new THREE.BoxGeometry(2.8,0.08,0.35),bM); spb.position.set(0,0.95,2.8); g.add(spb);
+        const spl=new THREE.Mesh(new THREE.BoxGeometry(0.1,0.28,0.1),bM); spl.position.set(-1.35,0.95,2.8); g.add(spl);
+        const spr=new THREE.Mesh(new THREE.BoxGeometry(0.1,0.28,0.1),bM); spr.position.set(1.35,0.95,2.8); g.add(spr);
+        // Geniş fender
+        [-1.62,1.62].forEach(x=>{const fw=new THREE.Mesh(new THREE.BoxGeometry(0.22,0.35,2.2),bM);fw.position.set(x,0.35,0);g.add(fw);});
+        const ws=new THREE.Mesh(new THREE.BoxGeometry(2.2,0.48,0.08),gM); ws.position.set(0,0.95,-0.98); ws.rotation.x=-0.5; g.add(ws);
+        const rw=new THREE.Mesh(new THREE.BoxGeometry(2.0,0.35,0.08),gM); rw.position.set(0,0.9,1.05); rw.rotation.x=0.55; g.add(rw);
+        // İnce farlar
+        const fll=new THREE.Mesh(new THREE.BoxGeometry(0.9,0.1,0.1),lM); fll.name="headlight"; fll.position.set(-1.1,0.55,-3.02); g.add(fll);
+        const flr=new THREE.Mesh(new THREE.BoxGeometry(0.9,0.1,0.1),lM); flr.name="headlight"; flr.position.set(1.1,0.55,-3.02); g.add(flr);
+        const tll=new THREE.Mesh(new THREE.BoxGeometry(1.0,0.1,0.1),rM); tll.name="taillight"; tll.position.set(-1.1,0.55,3.02); g.add(tll);
+        const tlr=new THREE.Mesh(new THREE.BoxGeometry(1.0,0.1,0.1),rM); tlr.name="taillight"; tlr.position.set(1.1,0.55,3.02); g.add(tlr);
+        [-1.62,1.62].forEach(x=>{const t=new THREE.Mesh(new THREE.BoxGeometry(0.06,0.06,5.6),tM);t.position.set(x,0.52,0);g.add(t);});
+        const nu=new THREE.Mesh(new THREE.BoxGeometry(3.0,0.05,5.6),nM); nu.position.y=0.03; g.add(nu);
+        _makeWheels(g,[{x:-1.55,z:-2.0},{x:1.55,z:-2.0},{x:-1.62,z:2.0},{x:1.62,z:2.0}],0.46,0.36);
+        [{x:-0.55},{x:0.55}].forEach(e=>{const ex=new THREE.Mesh(new THREE.CylinderGeometry(0.085,0.1,0.3,8),_darkMat2);ex.rotation.x=Math.PI/2;ex.position.set(e.x,0.22,3.08);g.add(ex);});
+        g.position.y=-0.5; return g;
     }
 
-    // =========================================================
-    // TİP 3 — SUV / PICKUP (yüksek, geniş, sağlam)
-    // =========================================================
-    function createSUV(palette, isParked) {
-        const g = new THREE.Group();
-        const P = palette;
-        const bodyMat  = new THREE.MeshStandardMaterial({ color: P.body, metalness: 0.75, roughness: 0.35 });
-        const trimMat  = new THREE.MeshStandardMaterial({ color: P.trim, metalness: 0.9,  roughness: 0.15, emissive: new THREE.Color(P.trim).multiplyScalar(0.25) });
-        const glassMat = new THREE.MeshStandardMaterial({ color: P.glass, metalness: 0.1, roughness: 0.05, transparent: true, opacity: 0.5 });
-        const darkMat  = new THREE.MeshStandardMaterial({ color: 0x0a0a0a, metalness: 0.6, roughness: 0.45 });
-        const rubberMat= new THREE.MeshStandardMaterial({ color: 0x101010, metalness: 0.0, roughness: 0.97 });
-        const rimMat   = new THREE.MeshStandardMaterial({ color: 0x777777, metalness: 0.95, roughness: 0.12 });
-        const lightMat = new THREE.MeshBasicMaterial({ color: isParked ? noGlow : glowCyan });
-        const tailMat  = new THREE.MeshBasicMaterial({ color: isParked ? noGlow : glowRed });
-        const neonMat  = new THREE.MeshBasicMaterial({ color: P.neon, transparent: true, opacity: isParked ? 0.3 : 0.7 });
-
-        // Alt gövde (yüksek clearance)
-        const lowerBody = new THREE.Mesh(new THREE.BoxGeometry(2.8, 0.85, 5.6), bodyMat);
-        lowerBody.position.y = 0.62; g.add(lowerBody);
-        // Yüksek kare kabin
-        const cabin = new THREE.Mesh(new THREE.BoxGeometry(2.55, 0.88, 3.2), bodyMat);
-        cabin.position.set(0, 1.6, -0.15); g.add(cabin);
-        // Çatı rayları
-        [-1.1, 1.1].forEach(x => {
-            const rail = new THREE.Mesh(new THREE.BoxGeometry(0.08, 0.1, 2.9), darkMat);
-            rail.position.set(x, 2.08, -0.15); g.add(rail);
-        });
-        // Ön kısım (kısa kaput)
-        const hood = new THREE.Mesh(new THREE.BoxGeometry(2.75, 0.15, 1.1), bodyMat);
-        hood.position.set(0, 1.1, -2.15); hood.rotation.x = 0.12; g.add(hood);
-        // Büyük ön ızgara (SUV tarzı)
-        const grill = new THREE.Mesh(new THREE.BoxGeometry(2.3, 0.5, 0.1), darkMat);
-        grill.position.set(0, 0.85, -2.83); g.add(grill);
-        const grillH = new THREE.Mesh(new THREE.BoxGeometry(2.2, 0.06, 0.12), trimMat);
-        grillH.position.set(0, 1.0, -2.83); g.add(grillH);
-        const grillH2 = grillH.clone(); grillH2.position.y = 0.78; g.add(grillH2);
-        // Step bar (yan basamak)
-        [-1.42, 1.42].forEach(x => {
-            const step = new THREE.Mesh(new THREE.BoxGeometry(0.12, 0.14, 4.0), darkMat);
-            step.position.set(x, 0.22, 0); g.add(step);
-        });
-        // Ön / arka tampon güçlendirilmiş
-        const fBump = new THREE.Mesh(new THREE.BoxGeometry(2.82, 0.4, 0.22), darkMat);
-        fBump.position.set(0, 0.5, -2.82); g.add(fBump);
-        const rBump = new THREE.Mesh(new THREE.BoxGeometry(2.82, 0.4, 0.22), darkMat);
-        rBump.position.set(0, 0.5, 2.82); g.add(rBump);
-        // Camlar
-        const wind = new THREE.Mesh(new THREE.BoxGeometry(2.35, 0.72, 0.09), glassMat);
-        wind.position.set(0, 1.62, -1.65); wind.rotation.x = -0.28; g.add(wind);
-        const rWin = new THREE.Mesh(new THREE.BoxGeometry(2.3, 0.65, 0.09), glassMat);
-        rWin.position.set(0, 1.6, 1.4); rWin.rotation.x = 0.22; g.add(rWin);
-        [-1.28, 1.28].forEach(x => {
-            const sw = new THREE.Mesh(new THREE.BoxGeometry(0.07, 0.52, 1.3), glassMat);
-            sw.position.set(x, 1.62, -0.15); g.add(sw);
-        });
-        // Farlar (kare, yüksek konumlu)
-        [-0.95, 0.95].forEach(x => {
-            const fl = new THREE.Mesh(new THREE.BoxGeometry(0.72, 0.28, 0.12), lightMat);
-            fl.position.set(x, 1.08, -2.84); g.add(fl);
-            const tl = new THREE.Mesh(new THREE.BoxGeometry(0.72, 0.28, 0.12), tailMat);
-            tl.position.set(x, 1.05, 2.84); g.add(tl);
-        });
-        // Büyük tekerlekler
-        g._wheels = [];
-        [{ x:-1.48, z:-1.85 },{ x:1.48, z:-1.85 },{ x:-1.48, z:1.85 },{ x:1.48, z:1.85 }].forEach(wp => {
-            const wg = new THREE.Group();
-            const tire = new THREE.Mesh(new THREE.CylinderGeometry(0.52, 0.52, 0.35, 16), rubberMat);
-            tire.rotation.z = Math.PI/2; wg.add(tire);
-            const rim = new THREE.Mesh(new THREE.CylinderGeometry(0.32, 0.32, 0.36, 8), rimMat);
-            rim.rotation.z = Math.PI/2; wg.add(rim);
-            for(let s=0;s<5;s++){
-                const sp = new THREE.Mesh(new THREE.BoxGeometry(0.05, 0.28, 0.37), rimMat);
-                sp.rotation.z = (s/5)*Math.PI*2; wg.add(sp);
-            }
-            wg.position.set(wp.x, 0.52, wp.z); g.add(wg); g._wheels.push(wg);
-        });
-        // Egzoz
-        const exh = new THREE.Mesh(new THREE.CylinderGeometry(0.08, 0.1, 0.38, 8), darkMat);
-        exh.rotation.x = Math.PI/2; exh.position.set(0.8, 0.28, 2.85); g.add(exh);
-        // Neon underglow
-        const neon = new THREE.Mesh(new THREE.BoxGeometry(2.6, 0.04, 5.3), neonMat);
-        neon.position.y = 0.05; g.add(neon);
-        g.position.y = -0.62;
-        g._speedMin = 18; g._speedMax = 36; g._type = 'suv';
-        return g;
+    // ─── TİP 2: VAN ─────────────────────────────────────────────────
+    function buildVan(P, isParked) {
+        const g=new THREE.Group();
+        const bM=new THREE.MeshStandardMaterial({color:P.body,metalness:0.5,roughness:0.55});
+        const tM=new THREE.MeshStandardMaterial({color:P.trim,metalness:0.6,roughness:0.4});
+        const gM=new THREE.MeshStandardMaterial({color:P.glass,metalness:0.1,roughness:0,transparent:true,opacity:0.5});
+        const nM=new THREE.MeshBasicMaterial({color:P.neon,transparent:true,opacity:isParked?0.3:0.7});
+        const lM=new THREE.MeshBasicMaterial({color:isParked?noGlow:glowCyan});
+        const rM=new THREE.MeshBasicMaterial({color:isParked?noGlow:glowRed});
+        const body=new THREE.Mesh(new THREE.BoxGeometry(3.2,2.2,7.0),bM); body.position.y=1.4; g.add(body);
+        const cab=new THREE.Mesh(new THREE.BoxGeometry(3.2,0.4,1.4),bM); cab.position.set(0,2.7,-2.8); g.add(cab);
+        const fb=new THREE.Mesh(new THREE.BoxGeometry(3.3,0.6,0.25),_darkMat2); fb.position.set(0,0.45,-3.62); g.add(fb);
+        const rb2=new THREE.Mesh(new THREE.BoxGeometry(3.3,0.4,0.25),_darkMat2); rb2.position.set(0,0.4,3.62); g.add(rb2);
+        [-1.62,1.62].forEach(x=>{const pl=new THREE.Mesh(new THREE.BoxGeometry(0.05,1.8,3.2),tM);pl.position.set(x,1.4,1.2);g.add(pl);});
+        const ws=new THREE.Mesh(new THREE.BoxGeometry(2.6,0.65,0.1),gM); ws.position.set(0,2.35,-3.48); g.add(ws);
+        [-1.62,1.62].forEach(x=>{const sw=new THREE.Mesh(new THREE.BoxGeometry(0.08,0.55,1.2),gM);sw.position.set(x,2.35,-2.2);g.add(sw);});
+        const fll=new THREE.Mesh(new THREE.BoxGeometry(0.75,0.32,0.1),lM); fll.name="headlight"; fll.position.set(-1.1,1.8,-3.52); g.add(fll);
+        const flr=new THREE.Mesh(new THREE.BoxGeometry(0.75,0.32,0.1),lM); flr.name="headlight"; flr.position.set(1.1,1.8,-3.52); g.add(flr);
+        const tll=new THREE.Mesh(new THREE.BoxGeometry(0.75,0.35,0.1),rM); tll.name="taillight"; tll.position.set(-1.1,1.6,3.52); g.add(tll);
+        const tlr=new THREE.Mesh(new THREE.BoxGeometry(0.75,0.35,0.1),rM); tlr.name="taillight"; tlr.position.set(1.1,1.6,3.52); g.add(tlr);
+        const rack=new THREE.Mesh(new THREE.BoxGeometry(2.4,0.08,3.5),_darkMat2); rack.position.set(0,2.56,0); g.add(rack);
+        const nu=new THREE.Mesh(new THREE.BoxGeometry(3.0,0.05,6.6),nM); nu.position.y=0.04; g.add(nu);
+        _makeWheels(g,[{x:-1.55,y:0.52,z:-2.2},{x:1.55,y:0.52,z:-2.2},{x:-1.6,y:0.52,z:2.2},{x:1.6,y:0.52,z:2.2}],0.52,0.32);
+        const ex=new THREE.Mesh(new THREE.CylinderGeometry(0.09,0.11,0.4,8),_darkMat2); ex.rotation.x=Math.PI/2; ex.position.set(1.5,0.7,3.7); g.add(ex);
+        g.position.y=-0.5; return g;
     }
 
-    // =========================================================
-    // TİP 4 — VAN / MİNİBÜS (yüksek kutu, kargo tarzı)
-    // =========================================================
-    function createVan(palette, isParked) {
-        const g = new THREE.Group();
-        const P = palette;
-        const bodyMat  = new THREE.MeshStandardMaterial({ color: P.body, metalness: 0.55, roughness: 0.55 });
-        const trimMat  = new THREE.MeshStandardMaterial({ color: P.trim, metalness: 0.8,  roughness: 0.2, emissive: new THREE.Color(P.trim).multiplyScalar(0.2) });
-        const glassMat = new THREE.MeshStandardMaterial({ color: P.glass, metalness: 0.05, roughness: 0.05, transparent: true, opacity: 0.55 });
-        const darkMat  = new THREE.MeshStandardMaterial({ color: 0x060606, metalness: 0.7, roughness: 0.4 });
-        const rubberMat= new THREE.MeshStandardMaterial({ color: 0x0f0f0f, metalness: 0.0, roughness: 0.98 });
-        const rimMat   = new THREE.MeshStandardMaterial({ color: 0x666666, metalness: 0.9, roughness: 0.18 });
-        const lightMat = new THREE.MeshBasicMaterial({ color: isParked ? noGlow : glowCyan });
-        const tailMat  = new THREE.MeshBasicMaterial({ color: isParked ? noGlow : glowRed });
-        const neonMat  = new THREE.MeshBasicMaterial({ color: P.neon, transparent: true, opacity: isParked ? 0.28 : 0.65 });
-
-        // Ana kutu gövde (uzun ve yüksek)
-        const body = new THREE.Mesh(new THREE.BoxGeometry(2.6, 1.7, 6.2), bodyMat);
-        body.position.y = 1.0; g.add(body);
-        // Ön bölüm (sürücü kabini hafif öne çıkık)
-        const cab = new THREE.Mesh(new THREE.BoxGeometry(2.62, 0.25, 0.55), bodyMat);
-        cab.position.set(0, 2.02, -3.35); g.add(cab);
-        // Ön yüz düz tampon
-        const fBump = new THREE.Mesh(new THREE.BoxGeometry(2.62, 0.5, 0.2), darkMat);
-        fBump.position.set(0, 0.32, -3.22); g.add(fBump);
-        // Arka tampon + yük kapısı çerçevesi
-        const rBump = new THREE.Mesh(new THREE.BoxGeometry(2.62, 0.42, 0.2), darkMat);
-        rBump.position.set(0, 0.32, 3.22); g.add(rBump);
-        const rDoorFrame = new THREE.Mesh(new THREE.BoxGeometry(0.12, 1.55, 0.14), darkMat);
-        rDoorFrame.position.set(0, 1.08, 3.24); g.add(rDoorFrame);
-        const rDoorTop = new THREE.Mesh(new THREE.BoxGeometry(2.5, 0.12, 0.14), darkMat);
-        rDoorTop.position.set(0, 1.92, 3.22); g.add(rDoorTop);
-        // Yan panel çizgisi
-        [-1.32, 1.32].forEach(x => {
-            const stripe = new THREE.Mesh(new THREE.BoxGeometry(0.07, 0.1, 5.8), trimMat);
-            stripe.position.set(x, 0.65, -0.1); g.add(stripe);
-            const topStripe = new THREE.Mesh(new THREE.BoxGeometry(0.07, 0.06, 5.8), trimMat);
-            topStripe.position.set(x, 1.82, -0.1); g.add(topStripe);
-        });
-        // Ön cam (büyük, dik)
-        const wind = new THREE.Mesh(new THREE.BoxGeometry(2.3, 1.0, 0.09), glassMat);
-        wind.position.set(0, 1.5, -3.1); wind.rotation.x = -0.12; g.add(wind);
-        // Yan camlar (ön)
-        [-1.32, 1.32].forEach(x => {
-            const sw = new THREE.Mesh(new THREE.BoxGeometry(0.07, 0.58, 0.9), glassMat);
-            sw.position.set(x, 1.5, -2.5); g.add(sw);
-        });
-        // Farlar (yatay dikdörtgen)
-        [-0.88, 0.88].forEach(x => {
-            const fl = new THREE.Mesh(new THREE.BoxGeometry(0.62, 0.24, 0.12), lightMat);
-            fl.position.set(x, 0.92, -3.22); g.add(fl);
-            const tl = new THREE.Mesh(new THREE.BoxGeometry(0.62, 0.24, 0.12), tailMat);
-            tl.position.set(x, 0.92, 3.22); g.add(tl);
-        });
-        // Çatı havalandırması / logosu
-        const roofPanel = new THREE.Mesh(new THREE.BoxGeometry(1.8, 0.1, 1.2), trimMat);
-        roofPanel.position.set(0, 1.88, -0.5); g.add(roofPanel);
-        // Tekerlekler (küçük, çift arka — simüle etmek için biraz geniş)
-        g._wheels = [];
-        [{ x:-1.35, z:-2.15 },{ x:1.35, z:-2.15 },{ x:-1.35, z:2.15 },{ x:1.35, z:2.15 }].forEach(wp => {
-            const wg = new THREE.Group();
-            const tire = new THREE.Mesh(new THREE.CylinderGeometry(0.44, 0.44, 0.30, 14), rubberMat);
-            tire.rotation.z = Math.PI/2; wg.add(tire);
-            const rim = new THREE.Mesh(new THREE.CylinderGeometry(0.26, 0.26, 0.31, 8), rimMat);
-            rim.rotation.z = Math.PI/2; wg.add(rim);
-            for(let s=0;s<6;s++){
-                const sp = new THREE.Mesh(new THREE.BoxGeometry(0.04, 0.22, 0.32), rimMat);
-                sp.rotation.z = (s/6)*Math.PI*2; wg.add(sp);
-            }
-            wg.position.set(wp.x, 0.44, wp.z); g.add(wg); g._wheels.push(wg);
-        });
-        // Neon underglow
-        const neon = new THREE.Mesh(new THREE.BoxGeometry(2.4, 0.04, 5.9), neonMat);
-        neon.position.y = 0.06; g.add(neon);
-        g.position.y = -0.52;
-        g._speedMin = 14; g._speedMax = 26; g._type = 'van';
-        return g;
+    // ─── TİP 3: MUSCLE ──────────────────────────────────────────────
+    function buildMuscle(P, isParked) {
+        const g=new THREE.Group();
+        const bM=new THREE.MeshStandardMaterial({color:P.body,metalness:0.88,roughness:0.2});
+        const tM=new THREE.MeshStandardMaterial({color:P.trim,metalness:1,roughness:0.05,emissive:new THREE.Color(P.trim).multiplyScalar(0.4)});
+        const gM=new THREE.MeshStandardMaterial({color:P.glass,metalness:0.1,roughness:0,transparent:true,opacity:0.5});
+        const nM=new THREE.MeshBasicMaterial({color:P.neon,transparent:true,opacity:isParked?0.45:0.9});
+        const lM=new THREE.MeshBasicMaterial({color:isParked?noGlow:glowCyan});
+        const rM=new THREE.MeshBasicMaterial({color:isParked?noGlow:glowRed});
+        const lb=new THREE.Mesh(new THREE.BoxGeometry(3.6,0.65,6.2),bM); lb.position.y=0.42; g.add(lb);
+        const hd=new THREE.Mesh(new THREE.BoxGeometry(3.4,0.16,2.8),bM); hd.position.set(0,0.82,-1.7); g.add(hd);
+        // Hood scoop
+        const sc=new THREE.Mesh(new THREE.BoxGeometry(0.9,0.22,1.4),bM); sc.position.set(0,0.96,-1.6); g.add(sc);
+        const cb=new THREE.Mesh(new THREE.BoxGeometry(2.8,0.62,2.4),bM); cb.position.set(0,1.12,0.8); g.add(cb);
+        [{x:-1.85},{x:1.85}].forEach(fw=>{const f=new THREE.Mesh(new THREE.BoxGeometry(0.28,0.42,3.2),bM);f.position.set(fw.x,0.4,0);g.add(f);});
+        const gr=new THREE.Mesh(new THREE.BoxGeometry(2.8,0.45,0.12),_darkMat2); gr.position.set(0,0.52,-3.12); g.add(gr);
+        const grA=new THREE.Mesh(new THREE.BoxGeometry(2.6,0.1,0.14),tM); grA.position.set(0,0.52,-3.12); g.add(grA);
+        const fb=new THREE.Mesh(new THREE.BoxGeometry(3.6,0.4,0.22),_darkMat2); fb.position.set(0,0.32,-3.15); g.add(fb);
+        const rb2=new THREE.Mesh(new THREE.BoxGeometry(3.6,0.35,0.22),_darkMat2); rb2.position.set(0,0.32,3.15); g.add(rb2);
+        const ws=new THREE.Mesh(new THREE.BoxGeometry(2.5,0.55,0.08),gM); ws.position.set(0,1.08,-0.4); ws.rotation.x=-0.32; g.add(ws);
+        const rw=new THREE.Mesh(new THREE.BoxGeometry(2.4,0.45,0.08),gM); rw.position.set(0,1.08,1.85); rw.rotation.x=0.32; g.add(rw);
+        [{x:-1.2},{x:1.2}].forEach(f=>{const fl=new THREE.Mesh(new THREE.BoxGeometry(0.7,0.25,0.1),lM);fl.name="headlight";fl.position.set(f.x,0.68,-3.1);g.add(fl);});
+        [{x:-1.2},{x:1.2}].forEach(t=>{const tl=new THREE.Mesh(new THREE.BoxGeometry(0.75,0.28,0.1),rM);tl.name="taillight";tl.position.set(t.x,0.68,3.1);g.add(tl);});
+        [-1.82,1.82].forEach(x=>{const t=new THREE.Mesh(new THREE.BoxGeometry(0.06,0.1,5.8),tM);t.position.set(x,0.62,0);g.add(t);});
+        const nu=new THREE.Mesh(new THREE.BoxGeometry(3.4,0.05,5.8),nM); nu.position.y=0.04; g.add(nu);
+        [{x:-0.7},{x:0.7}].forEach(e=>{const ex=new THREE.Mesh(new THREE.CylinderGeometry(0.11,0.13,0.4,8),_darkMat2);ex.rotation.x=Math.PI/2;ex.position.set(e.x,0.28,3.18);g.add(ex);});
+        _makeWheels(g,[{x:-1.85,z:-2.0},{x:1.85,z:-2.0},{x:-1.9,z:2.0},{x:1.9,z:2.0}],0.5,0.38);
+        g.position.y=-0.5; return g;
     }
 
-    // =========================================================
-    // TİP 5 — KAS ARABASI (uzun ön, geniş omuz, güçlü görünüm)
-    // =========================================================
-    function createMuscleCar(palette, isParked) {
-        const g = new THREE.Group();
-        const P = palette;
-        const bodyMat  = new THREE.MeshStandardMaterial({ color: P.body, metalness: 0.88, roughness: 0.18 });
-        const trimMat  = new THREE.MeshStandardMaterial({ color: P.trim, metalness: 1.0,  roughness: 0.06, emissive: new THREE.Color(P.trim).multiplyScalar(0.35) });
-        const glassMat = new THREE.MeshStandardMaterial({ color: P.glass, metalness: 0.08, roughness: 0.02, transparent: true, opacity: 0.52 });
-        const darkMat  = new THREE.MeshStandardMaterial({ color: 0x050505, metalness: 0.8, roughness: 0.3 });
-        const chromeMat= new THREE.MeshStandardMaterial({ color: 0xcccccc, metalness: 1.0, roughness: 0.04 });
-        const rubberMat= new THREE.MeshStandardMaterial({ color: 0x0c0c0c, metalness: 0.0, roughness: 0.97 });
-        const rimMat   = new THREE.MeshStandardMaterial({ color: 0xaaaaaa, metalness: 1.0, roughness: 0.08 });
-        const lightMat = new THREE.MeshBasicMaterial({ color: isParked ? noGlow : glowCyan });
-        const tailMat  = new THREE.MeshBasicMaterial({ color: isParked ? noGlow : glowRed });
-        const neonMat  = new THREE.MeshBasicMaterial({ color: P.neon, transparent: true, opacity: isParked ? 0.38 : 0.88 });
-
-        // Ana gövde (uzun ve geniş)
-        const lowerBody = new THREE.Mesh(new THREE.BoxGeometry(2.9, 0.68, 5.8), bodyMat);
-        lowerBody.position.y = 0.48; g.add(lowerBody);
-        // Kabin (arkaya yakın, kısa)
-        const cabin = new THREE.Mesh(new THREE.BoxGeometry(2.5, 0.7, 2.3), bodyMat);
-        cabin.position.set(0, 1.22, 0.55); g.add(cabin);
-        // Uzun güçlü kaput (motor çıkıntısı)
-        const hood = new THREE.Mesh(new THREE.BoxGeometry(2.75, 0.18, 2.3), bodyMat);
-        hood.position.set(0, 0.92, -1.8); g.add(hood);
-        // Kaput ortası çıkıntı (scoop)
-        const scoop = new THREE.Mesh(new THREE.BoxGeometry(0.55, 0.12, 1.8), bodyMat);
-        scoop.position.set(0, 1.08, -1.8); g.add(scoop);
-        // Krom trim (geniş)
-        [-1.46, 1.46].forEach(x => {
-            const trim = new THREE.Mesh(new THREE.BoxGeometry(0.07, 0.1, 5.3), chromeMat);
-            trim.position.set(x, 0.72, 0.1); g.add(trim);
-        });
-        // Ön tampon (krom)
-        const fBump = new THREE.Mesh(new THREE.BoxGeometry(2.92, 0.35, 0.22), chromeMat);
-        fBump.position.set(0, 0.38, -3.02); g.add(fBump);
-        // Arka tampon
-        const rBump = new THREE.Mesh(new THREE.BoxGeometry(2.92, 0.35, 0.22), chromeMat);
-        rBump.position.set(0, 0.38, 3.02); g.add(rBump);
-        // Arka fin / kanat ucları
-        [-1.36, 1.36].forEach(x => {
-            const fin = new THREE.Mesh(new THREE.BoxGeometry(0.12, 0.38, 0.4), bodyMat);
-            fin.position.set(x, 1.0, 2.8); g.add(fin);
-        });
-        // Camlar
-        const wind = new THREE.Mesh(new THREE.BoxGeometry(2.3, 0.58, 0.08), glassMat);
-        wind.position.set(0, 1.2, -0.62); wind.rotation.x = -0.42; g.add(wind);
-        const rWin = new THREE.Mesh(new THREE.BoxGeometry(2.25, 0.5, 0.08), glassMat);
-        rWin.position.set(0, 1.18, 1.65); rWin.rotation.x = 0.38; g.add(rWin);
-        [-1.26, 1.26].forEach(x => {
-            const sw = new THREE.Mesh(new THREE.BoxGeometry(0.07, 0.45, 1.0), glassMat);
-            sw.position.set(x, 1.22, 0.55); g.add(sw);
-        });
-        // Yuvarlak farlar (kas araba tarzı)
-        [-0.9, 0.9].forEach(x => {
-            const fl = new THREE.Mesh(new THREE.CylinderGeometry(0.22, 0.22, 0.1, 12), lightMat);
-            fl.rotation.x = Math.PI/2; fl.position.set(x, 0.76, -3.02); g.add(fl);
-            const flRing = new THREE.Mesh(new THREE.TorusGeometry(0.22, 0.04, 8, 12), chromeMat);
-            flRing.rotation.x = Math.PI/2; flRing.position.set(x, 0.76, -2.98); g.add(flRing);
-            const tl = new THREE.Mesh(new THREE.BoxGeometry(0.55, 0.18, 0.1), tailMat);
-            tl.position.set(x, 0.74, 3.02); g.add(tl);
-        });
-        // Büyük paten tekerlekler
-        g._wheels = [];
-        [{ x:-1.48, z:-1.85 },{ x:1.48, z:-1.85 },{ x:-1.48, z:1.85 },{ x:1.48, z:1.85 }].forEach(wp => {
-            const wg = new THREE.Group();
-            const tire = new THREE.Mesh(new THREE.CylinderGeometry(0.48, 0.48, 0.38, 16), rubberMat);
-            tire.rotation.z = Math.PI/2; wg.add(tire);
-            const rim = new THREE.Mesh(new THREE.CylinderGeometry(0.3, 0.3, 0.39, 10), rimMat);
-            rim.rotation.z = Math.PI/2; wg.add(rim);
-            for(let s=0;s<5;s++){
-                const sp = new THREE.Mesh(new THREE.BoxGeometry(0.05, 0.26, 0.4), rimMat);
-                sp.rotation.z = (s/5)*Math.PI*2; wg.add(sp);
-            }
-            wg.position.set(wp.x, 0.48, wp.z); g.add(wg); g._wheels.push(wg);
-        });
-        // Çift egzoz yan taraftan çıkıyor
-        [-0.6, 0.6].forEach(ex => {
-            const exh = new THREE.Mesh(new THREE.CylinderGeometry(0.07, 0.09, 0.4, 10), chromeMat);
-            exh.rotation.x = Math.PI/2; exh.position.set(ex, 0.24, 3.06); g.add(exh);
-        });
-        // Neon underglow
-        const neon = new THREE.Mesh(new THREE.BoxGeometry(2.7, 0.04, 5.5), neonMat);
-        neon.position.y = 0.05; g.add(neon);
-        g.position.y = -0.55;
-        g._speedMin = 30; g._speedMax = 55; g._type = 'muscle';
-        return g;
+    // ─── TİP 4: KOMPAKT ─────────────────────────────────────────────
+    function buildCompact(P, isParked) {
+        const g=new THREE.Group();
+        const bM=new THREE.MeshStandardMaterial({color:P.body,metalness:0.75,roughness:0.3});
+        const tM=new THREE.MeshStandardMaterial({color:P.trim,metalness:0.9,roughness:0.15,emissive:new THREE.Color(P.trim).multiplyScalar(0.2)});
+        const gM=new THREE.MeshStandardMaterial({color:P.glass,metalness:0.1,roughness:0,transparent:true,opacity:0.55});
+        const nM=new THREE.MeshBasicMaterial({color:P.neon,transparent:true,opacity:isParked?0.35:0.75});
+        const lM=new THREE.MeshBasicMaterial({color:isParked?noGlow:glowCyan});
+        const rM=new THREE.MeshBasicMaterial({color:isParked?noGlow:glowRed});
+        const body=new THREE.Mesh(new THREE.BoxGeometry(2.6,1.6,4.0),bM); body.position.y=1.0; g.add(body);
+        const fb=new THREE.Mesh(new THREE.BoxGeometry(2.6,0.5,0.18),_darkMat2); fb.position.set(0,0.45,-2.1); g.add(fb);
+        const rb2=new THREE.Mesh(new THREE.BoxGeometry(2.6,0.35,0.18),_darkMat2); rb2.position.set(0,0.4,2.1); g.add(rb2);
+        const ws=new THREE.Mesh(new THREE.BoxGeometry(2.2,0.75,0.08),gM); ws.position.set(0,1.55,-1.8); ws.rotation.x=-0.15; g.add(ws);
+        const rw=new THREE.Mesh(new THREE.BoxGeometry(2.2,0.65,0.08),gM); rw.position.set(0,1.55,1.6); rw.rotation.x=0.15; g.add(rw);
+        [-1.32,1.32].forEach(x=>{const sw=new THREE.Mesh(new THREE.BoxGeometry(0.07,0.6,1.2),gM);sw.position.set(x,1.52,0.1);g.add(sw);});
+        const fll=new THREE.Mesh(new THREE.BoxGeometry(0.6,0.28,0.1),lM); fll.name="headlight"; fll.position.set(-0.88,1.15,-2.02); g.add(fll);
+        const flr=new THREE.Mesh(new THREE.BoxGeometry(0.6,0.28,0.1),lM); flr.name="headlight"; flr.position.set(0.88,1.15,-2.02); g.add(flr);
+        const tll=new THREE.Mesh(new THREE.BoxGeometry(0.7,0.32,0.1),rM); tll.name="taillight"; tll.position.set(-0.88,1.1,2.02); g.add(tll);
+        const tlr=new THREE.Mesh(new THREE.BoxGeometry(0.7,0.32,0.1),rM); tlr.name="taillight"; tlr.position.set(0.88,1.1,2.02); g.add(tlr);
+        [-1.31,1.31].forEach(x=>{const t=new THREE.Mesh(new THREE.BoxGeometry(0.05,0.07,3.7),tM);t.position.set(x,0.7,0);g.add(t);});
+        const nu=new THREE.Mesh(new THREE.BoxGeometry(2.4,0.04,3.7),nM); nu.position.y=0.04; g.add(nu);
+        _makeWheels(g,[{x:-1.28,z:-1.35},{x:1.28,z:-1.35},{x:-1.28,z:1.35},{x:1.28,z:1.35}],0.37,0.24);
+        const ex=new THREE.Mesh(new THREE.CylinderGeometry(0.065,0.08,0.3,8),_darkMat2); ex.rotation.x=Math.PI/2; ex.position.set(0.5,0.2,2.1); g.add(ex);
+        g.position.y=-0.5; return g;
     }
 
-    // =========================================================
-    // TİP 6 — SİBER ZIRH (köşeli, geleceğin zırhlı aracı)
-    // =========================================================
-    function createCyberArmored(palette, isParked) {
-        const g = new THREE.Group();
-        const P = palette;
-        const bodyMat  = new THREE.MeshStandardMaterial({ color: P.body, metalness: 0.98, roughness: 0.06 });
-        const trimMat  = new THREE.MeshStandardMaterial({ color: P.trim, metalness: 1.0,  roughness: 0.03, emissive: new THREE.Color(P.trim).multiplyScalar(0.5) });
-        const glassMat = new THREE.MeshStandardMaterial({ color: 0x0a1a22, metalness: 0.3, roughness: 0.0, transparent: true, opacity: 0.4 });
-        const plateMat = new THREE.MeshStandardMaterial({ color: 0x0d0f14, metalness: 0.95, roughness: 0.08 });
-        const rubberMat= new THREE.MeshStandardMaterial({ color: 0x080808, metalness: 0.0, roughness: 0.99 });
-        const rimMat   = new THREE.MeshStandardMaterial({ color: P.trim,  metalness: 1.0,  roughness: 0.05 });
-        const lightMat = new THREE.MeshBasicMaterial({ color: isParked ? noGlow : glowCyan });
-        const tailMat  = new THREE.MeshBasicMaterial({ color: isParked ? noGlow : glowRed });
-        const neonMat  = new THREE.MeshBasicMaterial({ color: P.neon, transparent: true, opacity: isParked ? 0.45 : 0.95 });
+    const VEHICLE_TYPES = [
+        { build:buildSedan,  palettes:PALETTES_SEDAN,  baseSpeed:28, speedVar:20 },
+        { build:buildSport,  palettes:PALETTES_SPORT,  baseSpeed:55, speedVar:30 },
+        { build:buildVan,    palettes:PALETTES_VAN,    baseSpeed:14, speedVar:10 },
+        { build:buildMuscle, palettes:PALETTES_MUSCLE, baseSpeed:38, speedVar:24 },
+        { build:buildCompact,palettes:PALETTES_COMPACT,baseSpeed:20, speedVar:15 },
+    ];
 
-        // Ağır alt kasnak (wide-body)
-        const lowerBody = new THREE.Mesh(new THREE.BoxGeometry(3.2, 0.62, 5.8), bodyMat);
-        lowerBody.position.y = 0.42; g.add(lowerBody);
-        // Üst zırh gövdesi (köşeli, dik kenarlı)
-        const upperBody = new THREE.Mesh(new THREE.BoxGeometry(2.9, 0.9, 4.6), bodyMat);
-        upperBody.position.set(0, 1.15, -0.1); g.add(upperBody);
-        // Çatı modülü
-        const roof = new THREE.Mesh(new THREE.BoxGeometry(2.7, 0.42, 3.0), bodyMat);
-        roof.position.set(0, 1.76, -0.1); g.add(roof);
-        // Yan zırh plakaları
-        [-1.62, 1.62].forEach(x => {
-            const armorPlate = new THREE.Mesh(new THREE.BoxGeometry(0.18, 0.65, 4.8), plateMat);
-            armorPlate.position.set(x, 0.65, 0); g.add(armorPlate);
-            // Trim şeridi plaka üstünde
-            const ts = new THREE.Mesh(new THREE.BoxGeometry(0.1, 0.06, 4.7), trimMat);
-            ts.position.set(x, 1.0, 0); g.add(ts);
-            const ts2 = new THREE.Mesh(new THREE.BoxGeometry(0.1, 0.06, 4.7), trimMat);
-            ts2.position.set(x, 0.3, 0); g.add(ts2);
-        });
-        // Ön köşe zırh paneli
-        [[-1.4,-2.7],[1.4,-2.7],[-1.4,2.7],[1.4,2.7]].forEach(([x,z]) => {
-            const corner = new THREE.Mesh(new THREE.BoxGeometry(0.22, 0.8, 0.4), plateMat);
-            corner.position.set(x, 0.85, z); g.add(corner);
-        });
-        // Büyük kare ön ızgara
-        const grill = new THREE.Mesh(new THREE.BoxGeometry(2.4, 0.55, 0.12), plateMat);
-        grill.position.set(0, 0.78, -2.98); g.add(grill);
-        [0, -0.22, 0.22].forEach(y => {
-            const bar = new THREE.Mesh(new THREE.BoxGeometry(2.3, 0.04, 0.14), trimMat);
-            bar.position.set(0, 0.78+y, -2.99); g.add(bar);
-        });
-        // Ön cam (tek parça, düz)
-        const wind = new THREE.Mesh(new THREE.BoxGeometry(2.65, 0.68, 0.1), glassMat);
-        wind.position.set(0, 1.45, -2.25); wind.rotation.x = -0.18; g.add(wind);
-        // Yan cam (küçük, zırhlı görünüm)
-        [-1.46, 1.46].forEach(x => {
-            const sw = new THREE.Mesh(new THREE.BoxGeometry(0.08, 0.42, 1.1), glassMat);
-            sw.position.set(x, 1.45, -0.5); g.add(sw);
-        });
-        // LED çizgi farlar
-        const fLed = new THREE.Mesh(new THREE.BoxGeometry(2.85, 0.08, 0.1), lightMat);
-        fLed.position.set(0, 1.2, -2.98); g.add(fLed);
-        const fLed2 = new THREE.Mesh(new THREE.BoxGeometry(2.85, 0.08, 0.1), trimMat);
-        fLed2.position.set(0, 1.06, -2.98); g.add(fLed2);
-        // LED çizgi stop lambaları
-        const tLed = new THREE.Mesh(new THREE.BoxGeometry(2.85, 0.08, 0.1), tailMat);
-        tLed.position.set(0, 1.1, 2.98); g.add(tLed);
-        // Çatı sensör modülü
-        const sensor = new THREE.Mesh(new THREE.BoxGeometry(0.9, 0.28, 1.2), plateMat);
-        sensor.position.set(0, 2.06, -0.3); g.add(sensor);
-        [-0.3, 0.3].forEach(x => {
-            const sensorDot = new THREE.Mesh(new THREE.CylinderGeometry(0.07, 0.07, 0.1, 8), trimMat);
-            sensorDot.position.set(x, 2.22, -0.3); g.add(sensorDot);
-        });
-        // Büyük arazi tekerlekleri
-        g._wheels = [];
-        [{ x:-1.65, z:-1.92 },{ x:1.65, z:-1.92 },{ x:-1.65, z:1.92 },{ x:1.65, z:1.92 }].forEach(wp => {
-            const wg = new THREE.Group();
-            const tire = new THREE.Mesh(new THREE.CylinderGeometry(0.5, 0.5, 0.42, 16), rubberMat);
-            tire.rotation.z = Math.PI/2; wg.add(tire);
-            const rim = new THREE.Mesh(new THREE.CylinderGeometry(0.3, 0.3, 0.43, 8), rimMat);
-            rim.rotation.z = Math.PI/2; wg.add(rim);
-            for(let s=0;s<6;s++){
-                const sp = new THREE.Mesh(new THREE.BoxGeometry(0.05, 0.26, 0.44), rimMat);
-                sp.rotation.z = (s/6)*Math.PI*2; wg.add(sp);
-            }
-            wg.position.set(wp.x, 0.5, wp.z); g.add(wg); g._wheels.push(wg);
-        });
-        // Çift büyük egzoz
-        [-0.7, 0.7].forEach(ex => {
-            const exh = new THREE.Mesh(new THREE.CylinderGeometry(0.09, 0.11, 0.45, 10), plateMat);
-            exh.rotation.x = Math.PI/2; exh.position.set(ex, 0.25, 3.06); g.add(exh);
-            const glow = new THREE.Mesh(new THREE.CylinderGeometry(0.05, 0.05, 0.1, 8), neonMat);
-            glow.rotation.x = Math.PI/2; glow.position.set(ex, 0.25, 3.15); g.add(glow);
-        });
-        // Güçlü underglow
-        const neon = new THREE.Mesh(new THREE.BoxGeometry(3.0, 0.05, 5.5), neonMat);
-        neon.position.y = 0.04; g.add(neon);
-        g.position.y = -0.58;
-        g._speedMin = 20; g._speedMax = 42; g._type = 'cyber';
-        return g;
+    function spawnVehicle(isParked) {
+        const t = VEHICLE_TYPES[Math.floor(Math.random() * VEHICLE_TYPES.length)];
+        const p = t.palettes[Math.floor(Math.random() * t.palettes.length)];
+        const veh = t.build(p, isParked);
+        veh.speed = isParked ? 0 : (t.baseSpeed + Math.random() * t.speedVar);
+        return veh;
     }
 
-    // =========================================================
-    // MASTER: Rastgele araç oluştur (sedan dahil 6 tip arasından)
-    // =========================================================
-    const VEHICLE_TYPES = ['sedan', 'sedan', 'sports', 'suv', 'van', 'muscle', 'cyber'];
-    function createRandomVehicle(isParked) {
-        const palette = CAR_PALETTES[Math.floor(Math.random() * CAR_PALETTES.length)];
-        const type = VEHICLE_TYPES[Math.floor(Math.random() * VEHICLE_TYPES.length)];
-        let car;
-        switch(type) {
-            case 'sports':  car = createSportsCar(palette, isParked); break;
-            case 'suv':     car = createSUV(palette, isParked); break;
-            case 'van':     car = createVan(palette, isParked); break;
-            case 'muscle':  car = createMuscleCar(palette, isParked); break;
-            case 'cyber':   car = createCyberArmored(palette, isParked); break;
-            default:        car = createDetailedCar(palette, isParked); break;
-        }
-        // Sedan için varsayılan hız aralığı
-        if (!car._speedMin) { car._speedMin = 22; car._speedMax = 42; }
-        return car;
-    }
+    // Geriye dönük uyum — taksi için
+    const CAR_PALETTES = PALETTES_SEDAN;
+    function createDetailedCar(palette, isParked) { return buildSedan(palette, isParked); }
 
     // Hareketli araçlar
     const vehicles = [];
-    for(let i=0; i<30; i++) {
-        let carGroup = createRandomVehicle(false);
-        let isVertical = Math.random() > 0.5; let roadIndex = Math.floor(Math.random() * 9) - 4;
-        let roadCoord = roadIndex * gridStep; let offset = Math.random() > 0.5 ? 5 : -5;
-        carGroup.isVertical = isVertical; carGroup.direction = offset > 0 ? 1 : -1;
-        carGroup.speed = carGroup._speedMin + Math.random() * (carGroup._speedMax - carGroup._speedMin);
-        carGroup.isPlayerDriven = false; carGroup.isParked = false;
-        if(isVertical) { carGroup.position.x = roadCoord + offset; carGroup.position.z = (Math.random()-0.5)*500; if(carGroup.direction===-1) carGroup.rotation.y = Math.PI; }
-        else { carGroup.position.z = roadCoord + offset; carGroup.position.x = (Math.random()-0.5)*500; carGroup.rotation.y = carGroup.direction===1 ? Math.PI/2 : -Math.PI/2; }
-        scene.add(carGroup); vehicles.push(carGroup);
+    for(let i=0;i<32;i++) {
+        let cg = spawnVehicle(false);
+        let isVert=Math.random()>0.5; let rIdx=Math.floor(Math.random()*9)-4;
+        let rCoord=rIdx*gridStep; let off=Math.random()>0.5?5:-5;
+        cg.isVertical=isVert; cg.direction=off>0?1:-1; cg.isPlayerDriven=false; cg.isParked=false;
+        if(isVert){cg.position.x=rCoord+off;cg.position.z=(Math.random()-0.5)*500;if(cg.direction===-1)cg.rotation.y=Math.PI;}
+        else{cg.position.z=rCoord+off;cg.position.x=(Math.random()-0.5)*500;cg.rotation.y=cg.direction===1?Math.PI/2:-Math.PI/2;}
+        scene.add(cg); vehicles.push(cg);
     }
 
     // Park edilmiş araçlar
-    for(let i=0; i<20; i++) {
-        let carGroup = createRandomVehicle(true);
-        let isVertical = Math.random() > 0.5; let roadIndex = Math.floor(Math.random() * 9) - 4;
-        let roadCoord = roadIndex * gridStep; let offset = Math.random() > 0.5 ? 12 : -12;
-        carGroup.isVertical = isVertical; carGroup.direction = 1; carGroup.speed = 0;
-        carGroup.isPlayerDriven = false; carGroup.isParked = true;
-        if(isVertical) { carGroup.position.x = roadCoord + offset; carGroup.position.z = (Math.random()-0.5)*500; }
-        else { carGroup.position.z = roadCoord + offset; carGroup.position.x = (Math.random()-0.5)*500; carGroup.rotation.y = Math.PI/2; }
-        scene.add(carGroup); vehicles.push(carGroup);
+    for(let i=0;i<22;i++) {
+        let cg = spawnVehicle(true);
+        let isVert=Math.random()>0.5; let rIdx=Math.floor(Math.random()*9)-4;
+        let rCoord=rIdx*gridStep; let off=Math.random()>0.5?12:-12;
+        cg.isVertical=isVert; cg.direction=1; cg.isPlayerDriven=false; cg.isParked=true;
+        if(isVert){cg.position.x=rCoord+off;cg.position.z=(Math.random()-0.5)*500;}
+        else{cg.position.z=rCoord+off;cg.position.x=(Math.random()-0.5)*500;cg.rotation.y=Math.PI/2;}
+        scene.add(cg); vehicles.push(cg);
     }
 
     // === SARI TAKSİ (tek, özel) ===
@@ -3466,7 +3109,7 @@ window.onload = function() {
 
         if(type === 'crash') {
             for(let i=0;i<2;i++) {
-                const car = createRandomVehicle(false);
+                const car = createDetailedCar(CAR_PALETTES[Math.floor(Math.random()*CAR_PALETTES.length)], false);
                 car.position.set(pos.x + (i===0?-2.2:2.2), -0.5, pos.z + (i===0?-1.2:1.2));
                 car.rotation.y = (i===0 ? 0.85 : -0.55) + Math.random()*0.3;
                 car.speed = 0; car.isParked = true;
