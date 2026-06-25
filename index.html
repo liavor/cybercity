@@ -495,7 +495,13 @@
         <div class="wh-slot"        id="wh-2"><span class="wh-key">[2]</span><span class="wh-icon">◎</span><span class="wh-name" id="wh-2-label">NİŞANCI</span></div>
     </div>
 
-    <!-- ÖLÜM EKRANI -->
+    <!-- APEX ÖDÜL EKRANI -->
+    <div id="apex-reward-msg" style="display:none;position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);z-index:96;text-align:center;pointer-events:none;opacity:0;transition:opacity 0.5s;">
+        <div style="font-family:'Share Tech Mono',monospace;color:#ffd700;font-size:26px;letter-spacing:4px;text-shadow:0 0 30px #ffd700;margin-bottom:10px;">💎 APEX KRİSTALİ</div>
+        <div style="font-family:'Share Tech Mono',monospace;color:#ffe066;font-size:13px;letter-spacing:2px;line-height:2;background:rgba(2,6,18,0.92);border:1px solid rgba(255,210,0,0.4);border-top:2px solid #ffd700;padding:14px 28px;">
+            +2500 KRD &nbsp;|&nbsp; ZAMAN BÜKÜM → 8 SANİYE<br>ARANAN SEVİYE: TEMİZLENDİ
+        </div>
+    </div>
     <div id="death-screen" style="display:none;position:fixed;top:0;left:0;width:100%;height:100%;z-index:999;pointer-events:none;">
         <!-- Siyah örtü -->
         <div id="death-black" style="position:absolute;inset:0;background:#000;opacity:0;transition:opacity 0.4s;"></div>
@@ -1435,25 +1441,51 @@ window.onload = function() {
     // --- PROSEDÜREL DOKULAR ---
     function createRoadTexture() {
         const canvas = document.createElement('canvas'); canvas.width = 1024; canvas.height = 1024; const ctx = canvas.getContext('2d');
-        // Tek tip koyu zemin — kavşak/yol renk farkı yok
-        ctx.fillStyle = '#0a0c16'; ctx.fillRect(0, 0, 1024, 1024);
-        // İnce gürültü dokusu
-        for(let p=0; p<60; p++) {
-            ctx.fillStyle = `rgba(0, 40, 80, ${Math.random()*0.06})`;
-            ctx.beginPath(); ctx.arc(Math.random()*1024, Math.random()*1024, Math.random()*60+10, 0, Math.PI*2); ctx.fill();
+        // Orta gri asfalt zemini — Unturned şehir yolu tarzı
+        ctx.fillStyle = '#585858'; ctx.fillRect(0,0,1024,1024);
+        // İnce asfalt doku gürültüsü
+        for(let i=0;i<400;i++){
+            const v=Math.floor(Math.random()*16);
+            ctx.fillStyle=`rgba(${v},${v},${v},0.09)`;
+            ctx.fillRect(Math.random()*1024,Math.random()*1024,3+Math.random()*14,3+Math.random()*14);
         }
-        const margin = 170;
-        // Cyan çerçeve — blok sınırı (hafif, sadece yön hissi için)
-        ctx.shadowColor = '#00ffff'; ctx.shadowBlur = 8; ctx.strokeStyle = 'rgba(0,255,255,0.18)'; ctx.lineWidth = 3;
-        ctx.strokeRect(margin, margin, 1024 - margin*2, 1024 - margin*2);
-        ctx.shadowBlur = 0;
-        // Yol şerit işaretleri (turuncu noktalı çizgi)
-        ctx.fillStyle = '#ff7700';
-        for(let i=64; i<1024; i+=128) {
-            ctx.fillRect(0, i, 8, 64); ctx.fillRect(1016, i, 8, 64);
-            ctx.fillRect(i, 0, 64, 8); ctx.fillRect(i, 1016, 64, 8);
-        }
-        const tex = new THREE.CanvasTexture(canvas); tex.wrapS = THREE.RepeatWrapping; tex.wrapT = THREE.RepeatWrapping; return tex;
+        const M=170; // kenar marjı — kaldırım ile yol sınırı
+        // Yol kenar çizgileri (beyaz, solid)
+        ctx.strokeStyle='rgba(248,248,248,0.75)'; ctx.lineWidth=7; ctx.setLineDash([]);
+        [[0,M,1024,M],[0,1024-M,1024,1024-M],[M,0,M,1024],[1024-M,0,1024-M,1024]].forEach(([x1,y1,x2,y2])=>{
+            ctx.beginPath();ctx.moveTo(x1,y1);ctx.lineTo(x2,y2);ctx.stroke();
+        });
+        // Merkez kesik çizgi (sarı)
+        ctx.strokeStyle='rgba(240,210,50,0.85)'; ctx.lineWidth=5; ctx.setLineDash([55,45]);
+        ctx.beginPath();ctx.moveTo(0,512);ctx.lineTo(1024,512);ctx.stroke();
+        ctx.beginPath();ctx.moveTo(512,0);ctx.lineTo(512,1024);ctx.stroke();
+        ctx.setLineDash([]);
+        // Yaya geçidi zebra şeritleri (kavşak köşelerinde)
+        ctx.fillStyle='rgba(248,248,248,0.55)';
+        const zW=20, zH=50, zCount=5;
+        const zOffsets=[-2,-1,0,1,2];
+        zOffsets.forEach(o=>{
+            // Yatay geçit — üst ve alt
+            [M-60, 1024-M+10].forEach(yy=>{
+                ctx.fillRect(512+o*(zW+4)-zW/2, yy, zW, zH);
+            });
+            // Dikey geçit — sol ve sağ
+            [M-60, 1024-M+10].forEach(xx=>{
+                ctx.fillRect(xx, 512+o*(zW+4)-zW/2, zH, zW);
+            });
+        });
+        // Oto şerit oku (merkez yolda)
+        const drawArrow=(cx,cy,angle)=>{
+            ctx.save();ctx.translate(cx,cy);ctx.rotate(angle);
+            ctx.fillStyle='rgba(240,240,240,0.45)';
+            ctx.beginPath();ctx.moveTo(0,-28);ctx.lineTo(10,-6);ctx.lineTo(4,-6);ctx.lineTo(4,28);
+            ctx.lineTo(-4,28);ctx.lineTo(-4,-6);ctx.lineTo(-10,-6);ctx.closePath();ctx.fill();
+            ctx.restore();
+        };
+        drawArrow(256,512,0);drawArrow(768,512,Math.PI);
+        drawArrow(512,256,Math.PI/2);drawArrow(512,768,-Math.PI/2);
+        const tex=new THREE.CanvasTexture(canvas); tex.wrapS=THREE.RepeatWrapping; tex.wrapT=THREE.RepeatWrapping;
+        return tex;
     }
     
     function createBuildingTexture(hue) {
@@ -1554,16 +1586,20 @@ window.onload = function() {
     const roadTex = createRoadTexture(); roadTex.repeat.set(10, 10); 
     // Zemin: metalness düşük, roughness yüksek — asfalt parlamamalı
     // emissive: gece zemin tamamen kararmayı önleyen çok düşük bir taban ışık
-    const roadMat = new THREE.MeshStandardMaterial({ 
-        map: roadTex, color: 0x888888, roughness: 0.97, metalness: 0.0,
-        emissive: new THREE.Color(0.012, 0.018, 0.025),
-        emissiveIntensity: 1.0
+    // YOL MATERYALİ — açık gri asfalt, mat yüzey, Unturned tarzı
+    const roadMat = new THREE.MeshStandardMaterial({
+        map: roadTex, color: 0xb0aeaa, roughness: 0.96, metalness: 0.0
     });
     const cityFloor = new THREE.Mesh(new THREE.PlaneGeometry(600, 600), roadMat); cityFloor.rotation.x = -Math.PI / 2; cityFloor.position.y = -1; worldGroup.add(cityFloor); floorMeshes.push(cityFloor);
 
-    const bMatGecekondu = new THREE.MeshStandardMaterial({ map: createBuildingTexture(180), roughness: 0.8, metalness: 0.2, emissive: 0x004444 }); 
-    const bMatEndustri = new THREE.MeshStandardMaterial({ map: createBuildingTexture(10), roughness: 0.9, metalness: 0.5, emissive: 0x440000 });  
-    const bMatPlaza = new THREE.MeshStandardMaterial({ map: createBuildingTexture(220), roughness: 0.2, metalness: 0.9, emissive: 0x001144 });    
+    // BINA MATERYALLERİ — Unturned low-poly: açık renkler, mat yüzey, temiz görünüm
+    // Her bölge farklı palet kullanır, ek randomizasyon için district-bazlı index
+    const _bmShared = { roughness:0.88, metalness:0.0 }; // ortak düşük-gloss ayar
+    const bMatGecekondu = new THREE.MeshStandardMaterial({ ..._bmShared, map: createBuildingTexture(0) });  // açık beton
+    const bMatEndustri  = new THREE.MeshStandardMaterial({ ..._bmShared, map: createBuildingTexture(2), roughness:0.92 });  // koyu beton
+    const bMatPlaza     = new THREE.MeshStandardMaterial({ ..._bmShared, map: createBuildingTexture(4), roughness:0.78, metalness:0.08 });  // beyaz modern
+    // Ekstra malzeme seti — bina çeşitliliği için
+    const _extraBMats = [1,3,5,0,4,2].map(i => new THREE.MeshStandardMaterial({ ..._bmShared, map: createBuildingTexture(i) }));    
 
 
     const buildings = [];
@@ -1642,9 +1678,11 @@ window.onload = function() {
     for(let x = -270; x <= 270; x += gridStep) {
         for(let z = -270; z <= 270; z += gridStep) {
             if (Math.abs(x) < 40 && Math.abs(z) < 40) continue; 
-            let currentMat = bMatGecekondu; let heightMultiplier = 1;
-            if(z > 100) { currentMat = bMatEndustri; heightMultiplier = 0.8; } 
-            if(z < -100) { currentMat = bMatPlaza; heightMultiplier = 2.5; }   
+            // Bölge malzemesi + ekstra randomizasyon — her bina farklı ton
+            let currentMat, heightMultiplier = 1;
+            if(z > 100)       { currentMat = (Math.random()>0.5) ? bMatEndustri : _extraBMats[2]; heightMultiplier = 0.8; }
+            else if(z < -100) { currentMat = (Math.random()>0.5) ? bMatPlaza    : _extraBMats[4]; heightMultiplier = 2.5; }
+            else { const ri=Math.floor(Math.random()*_extraBMats.length); currentMat=_extraBMats[ri]; }   
             let bCount = Math.floor(Math.random() * 2) + 1;
             for(let b=0; b<bCount; b++) {
                 let w = (Math.random() * 15 + 10); let d = (Math.random() * 15 + 10); let h = (Math.random() * 30 + 20) * heightMultiplier;
@@ -1687,6 +1725,209 @@ window.onload = function() {
             }
         }
     }
+
+    // =========================================================
+    // ŞEHİR ESTETİĞİ — Kaldırımlar, Lambalar, Mobilyalar, Ağaçlar
+    // Unturned low-poly modern şehir tarzı — sadece görsel
+    // =========================================================
+    (function buildCityDecor() {
+        // ── Ortak malzemeler ──────────────────────────────────────────
+        const sidewalkMat = new THREE.MeshStandardMaterial({color:0xcdc9bf, roughness:0.93, metalness:0.0});
+        const curbMat     = new THREE.MeshStandardMaterial({color:0xb0acA4, roughness:0.95, metalness:0.0});
+        const poleMat     = new THREE.MeshStandardMaterial({color:0x3a3838, metalness:0.75, roughness:0.3});
+        const lampMat     = new THREE.MeshBasicMaterial({color:0xfff5d8});
+        const benchWood   = new THREE.MeshStandardMaterial({color:0x8B6040, roughness:0.85});
+        const benchMetal  = new THREE.MeshStandardMaterial({color:0x404840, metalness:0.6, roughness:0.5});
+        const binMat      = new THREE.MeshStandardMaterial({color:0x484c44, roughness:0.75});
+        const planterMat  = new THREE.MeshStandardMaterial({color:0x8a7a60, roughness:0.9});
+        const bushMat     = new THREE.MeshStandardMaterial({color:0x4a8a50, roughness:0.95});
+        const trunkMat    = new THREE.MeshStandardMaterial({color:0x6b4226, roughness:0.92});
+        const foliage1    = new THREE.MeshStandardMaterial({color:0x3a7840, roughness:0.95});
+        const foliage2    = new THREE.MeshStandardMaterial({color:0x2d6832, roughness:0.95});
+        const foliage3    = new THREE.MeshStandardMaterial({color:0x4a9050, roughness:0.95});
+        const stopMat     = new THREE.MeshBasicMaterial({color:0xcc2200,side:THREE.DoubleSide});
+        const signMat     = new THREE.MeshBasicMaterial({color:0xffffff,side:THREE.DoubleSide});
+        const signFrameMat= new THREE.MeshStandardMaterial({color:0x555555,metalness:0.6});
+
+        const range=270, step=gridStep; // 60
+
+        // ── KALDIRIMLAR — yol boyunca kaldırım şeritleri ──────────────
+        const swW=4.5, swH=0.25;
+        const swGeoH = new THREE.BoxGeometry(range*2, swH, swW); // yatay yol
+        const swGeoV = new THREE.BoxGeometry(swW, swH, range*2); // dikey yol
+        const curbGeoH = new THREE.BoxGeometry(range*2, 0.18, 0.4);
+        const curbGeoV = new THREE.BoxGeometry(0.4, 0.18, range*2);
+
+        for(let xi=-4;xi<=4;xi++) {
+            const rx=xi*step;
+            [-1,1].forEach(side=>{
+                const sw=new THREE.Mesh(swGeoV, sidewalkMat);
+                sw.position.set(rx+side*(10+swW/2), -0.88, 0);
+                worldGroup.add(sw);
+                const curb=new THREE.Mesh(curbGeoV, curbMat);
+                curb.position.set(rx+side*10, -0.92, 0);
+                worldGroup.add(curb);
+            });
+        }
+        for(let zi=-4;zi<=4;zi++) {
+            const rz=zi*step;
+            [-1,1].forEach(side=>{
+                const sw=new THREE.Mesh(swGeoH, sidewalkMat);
+                sw.position.set(0, -0.88, rz+side*(10+swW/2));
+                worldGroup.add(sw);
+                const curb=new THREE.Mesh(curbGeoH, curbMat);
+                curb.position.set(0, -0.92, rz+side*10);
+                worldGroup.add(curb);
+            });
+        }
+
+        // ── SOKAK LAMBASI helper ──────────────────────────────────────
+        const poleGeo  = new THREE.CylinderGeometry(0.08,0.14,5.8,6);
+        const armGeo   = new THREE.CylinderGeometry(0.05,0.05,1.4,4);
+        const headGeo  = new THREE.BoxGeometry(1.5,0.22,0.38);
+        const glasGeo  = new THREE.BoxGeometry(1.3,0.12,0.28);
+        const glaMat   = new THREE.MeshBasicMaterial({color:0xfff8e0});
+        function makeLamp(x,z,rotY) {
+            const g=new THREE.Group();
+            const pole=new THREE.Mesh(poleGeo,poleMat); pole.position.y=2.9; g.add(pole);
+            const arm=new THREE.Mesh(armGeo,poleMat); arm.rotation.z=Math.PI/2; arm.position.set(0.7,5.8,0); g.add(arm);
+            const head=new THREE.Mesh(headGeo,poleMat); head.position.set(1.4,5.75,0); g.add(head);
+            const glas=new THREE.Mesh(glasGeo,glaMat); glas.position.set(1.4,5.67,0); g.add(glas);
+            g.position.set(x,-1,z); g.rotation.y=rotY||0;
+            worldGroup.add(g);
+        }
+        // Lambalar yol boyunca, her 30 birimde bir
+        for(let xi=-4;xi<=4;xi++) {
+            const rx=xi*step;
+            for(let z=-range;z<=range;z+=30) {
+                const nearCross=Math.abs(z%step)<16;
+                if(!nearCross) { makeLamp(rx+12,z,0); makeLamp(rx-12,z,Math.PI); }
+            }
+        }
+        for(let zi=-4;zi<=4;zi++) {
+            const rz=zi*step;
+            for(let x=-range;x<=range;x+=30) {
+                const nearCross=Math.abs(x%step)<16;
+                if(!nearCross) { makeLamp(x,rz+12,Math.PI/2); makeLamp(x,rz-12,-Math.PI/2); }
+            }
+        }
+
+        // ── SOKAK MOBİLYALARI ─────────────────────────────────────────
+        function makeBench(x,z,ry) {
+            const g=new THREE.Group();
+            const seat=new THREE.Mesh(new THREE.BoxGeometry(1.8,0.12,0.55),benchWood);
+            seat.position.y=0.46; g.add(seat);
+            const back=new THREE.Mesh(new THREE.BoxGeometry(1.8,0.38,0.08),benchWood);
+            back.position.set(0,0.72,0.24); g.add(back);
+            [-0.7,0.7].forEach(lx=>{
+                const leg=new THREE.Mesh(new THREE.BoxGeometry(0.1,0.46,0.5),benchMetal);
+                leg.position.set(lx,0.23,0); g.add(leg);
+            });
+            g.position.set(x,-0.96,z); g.rotation.y=ry||0; worldGroup.add(g);
+        }
+        function makeBin(x,z) {
+            const g=new THREE.Group();
+            const body=new THREE.Mesh(new THREE.CylinderGeometry(0.25,0.2,0.78,8),binMat);
+            body.position.y=0.39; g.add(body);
+            const lid=new THREE.Mesh(new THREE.CylinderGeometry(0.27,0.27,0.08,8),benchMetal);
+            lid.position.y=0.82; g.add(lid);
+            g.position.set(x,-0.98,z); worldGroup.add(g);
+        }
+        function makePlanter(x,z) {
+            const g=new THREE.Group();
+            const box=new THREE.Mesh(new THREE.BoxGeometry(0.85,0.55,0.85),planterMat);
+            box.position.y=0.275; g.add(box);
+            const b=new THREE.Mesh(new THREE.SphereGeometry(0.45,6,4),bushMat);
+            b.position.y=0.82; g.add(b);
+            g.position.set(x,-0.97,z); worldGroup.add(g);
+        }
+        // Ana caddeler boyunca mobilya
+        const furnitureRoads=[-120,-60,0,60,120];
+        furnitureRoads.forEach(rx=>{
+            for(let z=-240;z<=240;z+=25) {
+                const nearCross=Math.abs(z%step)<14;
+                if(nearCross) continue;
+                const r=Math.random();
+                const side=(Math.random()>0.5?1:-1)*(12+swW);
+                if(r<0.3)       makeBench(rx+side, z, Math.PI/2);
+                else if(r<0.55) makeBin(rx+side, z);
+                else if(r<0.72) makePlanter(rx+side, z);
+            }
+        });
+        [-120,-60,0,60,120].forEach(rz=>{
+            for(let x=-240;x<=240;x+=25) {
+                const nearCross=Math.abs(x%step)<14;
+                if(nearCross) continue;
+                const r=Math.random();
+                const side=(Math.random()>0.5?1:-1)*(12+swW);
+                if(r<0.25)       makeBench(x, rz+side, 0);
+                else if(r<0.45)  makeBin(x, rz+side);
+                else if(r<0.60)  makePlanter(x, rz+side);
+            }
+        });
+
+        // ── UNTURNED TARZI SOKAK AĞAÇLARI ────────────────────────────
+        function makeCityTree(x,z,sc) {
+            sc=sc||1;
+            const g=new THREE.Group();
+            const trunk=new THREE.Mesh(new THREE.CylinderGeometry(0.28*sc,0.38*sc,2.5*sc,6),trunkMat);
+            trunk.position.y=1.25*sc; g.add(trunk);
+            const layers=[
+                [2.4*sc,3.0*sc,3.8*sc, foliage1],
+                [1.8*sc,2.5*sc,5.5*sc, foliage2],
+                [1.2*sc,2.0*sc,7.1*sc, foliage3],
+                [0.7*sc,1.5*sc,8.4*sc, foliage1],
+            ];
+            layers.forEach(([r,h,y,mat])=>{
+                const cone=new THREE.Mesh(new THREE.ConeGeometry(r,h,6),mat);
+                cone.position.y=y; g.add(cone);
+            });
+            g.rotation.y=Math.random()*Math.PI*2;
+            g.position.set(x,-1,z);
+            worldGroup.add(g);
+        }
+        // Kavşak köşelerine ağaç
+        for(let xi=-3;xi<=3;xi++) {
+            for(let zi=-3;zi<=3;zi++) {
+                const rx=xi*step, rz=zi*step;
+                const sc=0.75+Math.random()*0.45;
+                const offsets=[[14,14],[-14,14],[14,-14],[-14,-14]];
+                offsets.forEach(([ox,oz])=>{
+                    if(Math.random()>0.40) {
+                        const jx=rx+ox+(Math.random()-0.5)*4;
+                        const jz=rz+oz+(Math.random()-0.5)*4;
+                        // Bina çarpışma kontrolü: binaların yakınına koyma
+                        const tooClose=buildings.some(b=>Math.abs(b.x-jx)<b.w/2+3 && Math.abs(b.z-jz)<b.d/2+3);
+                        if(!tooClose) makeCityTree(jx,jz,sc);
+                    }
+                });
+            }
+        }
+
+        // ── TRAFİK İŞARETLERİ ────────────────────────────────────────
+        function makeSign(x,z,type,ry) {
+            const g=new THREE.Group();
+            const pole=new THREE.Mesh(new THREE.CylinderGeometry(0.055,0.055,2.6,6),poleMat);
+            pole.position.y=1.3; g.add(pole);
+            if(type==='stop') {
+                const s=new THREE.Mesh(new THREE.CircleGeometry(0.38,8),stopMat);
+                s.position.set(0,2.75,0); g.add(s);
+            } else if(type==='speed') {
+                const frame=new THREE.Mesh(new THREE.BoxGeometry(0.55,0.7,0.06),signFrameMat);
+                frame.position.set(0,2.75,0); g.add(frame);
+                const inner=new THREE.Mesh(new THREE.BoxGeometry(0.44,0.58,0.07),signMat);
+                inner.position.set(0,2.75,0); g.add(inner);
+            } else { // direction
+                const arr=new THREE.Mesh(new THREE.BoxGeometry(0.7,0.28,0.06),signMat);
+                arr.position.set(0,2.72,0); g.add(arr);
+            }
+            g.position.set(x,-1,z); g.rotation.y=ry||0; worldGroup.add(g);
+        }
+        // Bazı kavşak köşelerine işaret
+        [[-65,8,'stop',0],[65,8,'speed',Math.PI/4],[8,-65,'direction',Math.PI/2],
+         [-8,65,'stop',0],[125,8,'speed',0],[-125,8,'direction',0]].forEach(([x,z,t,r])=>makeSign(x,z,t,r));
+
+    })(); // end buildCityDecor
 
     // =========================================================
     // ŞEHİR SINIRLARI — Plaj, Okyanus ve İskele (GTA Vice City ruhu)
@@ -2488,6 +2729,137 @@ window.onload = function() {
             if(ok) { placed.push({x:tx,z:tz}); makePineTree(tx, tz, 0.7+Math.random()*0.6); }
         }
     })();
+
+    // ================================================================
+    // APEX PROTOKOLÜ — Çatı Parkuru (8 platform, y=38→75)
+    // Zirve ödülü: Zaman Büküm Kristali + 2500 KRD + Wanted temizle
+    // ================================================================
+    const _PARKOUR_PLATS = [
+        {x: 40,  y:38, z: -80,  w:4.5, d:4.5, col:0x00e5cc},
+        {x: 62,  y:41, z:-100,  w:4.2, d:4.2, col:0x00b8d9},
+        {x: 85,  y:45, z: -78,  w:4.0, d:4.0, col:0x0077b6},
+        {x: 78,  y:51, z: -52,  w:3.8, d:3.8, col:0x4361ee},
+        {x: 52,  y:57, z: -32,  w:3.6, d:3.6, col:0x7209b7},
+        {x: 25,  y:63, z: -58,  w:3.4, d:3.4, col:0x9d00ff},
+        {x: -8,  y:69, z: -85,  w:3.2, d:3.2, col:0xc77dff},
+        {x:-35,  y:75, z: -62,  w:4.2, d:4.2, col:0xffd700},
+    ];
+    const _parkourGroups = []; const _parkourBridges = [];
+    const _parkourOp = {val:0};
+    let _apexCollected = false; let _apexCrystalMesh = null;
+    let _apexRespawnTimer = 0; let _parkourArrowClock = 0;
+
+    (function buildParkourSystem() {
+        const mkEdgeMat = col => new THREE.MeshBasicMaterial({color:col,transparent:true,opacity:0,blending:THREE.AdditiveBlending});
+        const mkBaseMat = ()  => new THREE.MeshStandardMaterial({color:0x040c18,metalness:0.85,roughness:0.25,emissive:new THREE.Color(0,0.04,0.10),transparent:true,opacity:0});
+
+        _PARKOUR_PLATS.forEach((pd, idx) => {
+            const grp = new THREE.Group();
+            grp.position.set(pd.x, pd.y, pd.z);
+            grp._pd = pd; grp._idx = idx;
+            const base = new THREE.Mesh(new THREE.BoxGeometry(pd.w,0.35,pd.d), mkBaseMat());
+            grp.add(base); grp._baseMesh = base;
+            grp._edgeMeshes = [];
+            [{g:new THREE.BoxGeometry(pd.w+0.1,0.07,0.07),p:[0,0.18,-pd.d/2]},
+             {g:new THREE.BoxGeometry(pd.w+0.1,0.07,0.07),p:[0,0.18, pd.d/2]},
+             {g:new THREE.BoxGeometry(0.07,0.07,pd.d+0.1),p:[-pd.w/2,0.18,0]},
+             {g:new THREE.BoxGeometry(0.07,0.07,pd.d+0.1),p:[ pd.w/2,0.18,0]},
+            ].forEach(e => { const em=mkEdgeMat(pd.col); const m=new THREE.Mesh(e.g,em); m.position.set(...e.p); grp.add(m); grp._edgeMeshes.push(m); });
+            const poleMat = new THREE.MeshBasicMaterial({color:pd.col,transparent:true,opacity:0});
+            const pole = new THREE.Mesh(new THREE.CylinderGeometry(0.04,0.04,1.8,6),poleMat);
+            pole.position.y=1.25; grp.add(pole); grp._poleMesh=pole;
+            const numMat = new THREE.MeshBasicMaterial({color:pd.col,transparent:true,opacity:0,blending:THREE.AdditiveBlending});
+            const numMesh = new THREE.Mesh(new THREE.BoxGeometry(0.45,0.45,0.45),numMat);
+            numMesh.position.y=2.4; grp.add(numMesh); grp._numMesh=numMesh;
+            if(idx === _PARKOUR_PLATS.length-1) {
+                const cMat=new THREE.MeshBasicMaterial({color:0xffd700,transparent:true,opacity:0,blending:THREE.AdditiveBlending});
+                const crystal=new THREE.Mesh(new THREE.OctahedronGeometry(0.75,0),cMat);
+                crystal.position.y=1.85; grp.add(crystal); _apexCrystalMesh=crystal;
+                const aM=new THREE.MeshBasicMaterial({color:0xffd700,transparent:true,opacity:0,blending:THREE.AdditiveBlending});
+                const aura=new THREE.Mesh(new THREE.TorusGeometry(1.0,0.06,8,24),aM);
+                aura.rotation.x=Math.PI/2; aura.position.y=1.85; grp.add(aura); grp._auraMat=aM;
+                const aM2=new THREE.MeshBasicMaterial({color:0xfffaaa,transparent:true,opacity:0,blending:THREE.AdditiveBlending});
+                const aura2=new THREE.Mesh(new THREE.TorusGeometry(1.0,0.06,8,24),aM2);
+                aura2.rotation.z=Math.PI/2; aura2.position.y=1.85; grp.add(aura2); grp._auraMat2=aM2;
+            }
+            grp.visible=false; scene.add(grp); _parkourGroups.push(grp);
+        });
+        for(let i=0;i<_PARKOUR_PLATS.length-1;i++) {
+            const A=_PARKOUR_PLATS[i],B=_PARKOUR_PLATS[i+1];
+            const dx=B.x-A.x,dz=B.z-A.z,len=Math.sqrt(dx*dx+dz*dz);
+            const bMat=new THREE.MeshBasicMaterial({color:A.col,transparent:true,opacity:0,blending:THREE.AdditiveBlending});
+            const b=new THREE.Mesh(new THREE.BoxGeometry(len,0.05,0.1),bMat);
+            b.position.set((A.x+B.x)/2,(A.y+B.y)/2+0.18,(A.z+B.z)/2);
+            b.rotation.y=-Math.atan2(dz,dx); b.visible=false; scene.add(b);
+            _parkourBridges.push({mesh:b,mat:bMat});
+        }
+    })();
+
+    function _setParkourOpacity(target, dt) {
+        _parkourOp.val += (target - _parkourOp.val) * Math.min(1, 2.8*dt);
+        const op=_parkourOp.val, vis=op>0.02;
+        _parkourGroups.forEach(grp => {
+            grp.visible=vis;
+            grp._baseMesh.material.opacity  = op*0.80;
+            grp._poleMesh.material.opacity  = op*0.55;
+            grp._numMesh.material.opacity   = op*0.65;
+            grp._edgeMeshes.forEach(e => e.material.opacity=op*0.90);
+            if(grp._auraMat)  grp._auraMat.opacity  = op*0.50;
+            if(grp._auraMat2) grp._auraMat2.opacity = op*0.35;
+            if(_apexCrystalMesh && grp._idx===_PARKOUR_PLATS.length-1)
+                _apexCrystalMesh.material.opacity = _apexCollected?0:op*0.92;
+        });
+        _parkourBridges.forEach(b=>{b.mesh.visible=vis; b.mat.opacity=op*0.28;});
+    }
+
+    function updateParkourSystem(dt, now, playerPos) {
+        const shouldShow = GAME.onRooftop && !GAME.isDriving && !GAME.metroRiding;
+        _setParkourOpacity(shouldShow?1.0:0.0, dt);
+        _parkourGroups.forEach(grp => { grp._numMesh.rotation.y += dt*1.3; });
+        if(!shouldShow || _parkourOp.val < 0.05) return;
+        if(!_apexCollected && _apexCrystalMesh) {
+            _apexCrystalMesh.rotation.y += dt*1.6;
+            _apexCrystalMesh.rotation.x += dt*0.7;
+            _apexCrystalMesh.position.y = 1.85 + Math.sin(now*0.0025)*0.28;
+            const ap=_PARKOUR_PLATS[_PARKOUR_PLATS.length-1];
+            if(Math.hypot(playerPos.x-ap.x, playerPos.y-(ap.y+1.85), playerPos.z-ap.z)<2.8) _collectApexReward();
+        }
+        if(_apexCollected) {
+            _apexRespawnTimer -= dt;
+            if(_apexRespawnTimer<=0) {
+                _apexCollected=false;
+                if(_apexCrystalMesh) _apexCrystalMesh.material.opacity=1;
+                showLootMessage('💎 APEX KRİSTALİ YENİDEN DOĞDU','#ffd700');
+            }
+        }
+        _parkourArrowClock += dt;
+        if(_parkourArrowClock>4.5) {
+            _parkourArrowClock=0;
+            const p0=_PARKOUR_PLATS[0];
+            if(Math.hypot(playerPos.x-p0.x,playerPos.z-p0.z)>15)
+                showLootMessage('◈ APEX PROTOKOLÜ — Parlayan platformları takip et!','#00e5cc');
+        }
+    }
+
+    function _collectApexReward() {
+        _apexCollected=true; _apexRespawnTimer=180;
+        if(_apexCrystalMesh) _apexCrystalMesh.material.opacity=0;
+        GAME._btDuration=8000;
+        GAME.wantedLevel=0; updateWantedUI(); if(_wantedMusicActive) stopWantedMusic();
+        GAME.score+=2500; if(scoreDisplay) scoreDisplay.innerText=GAME.score.toString().padStart(4,'0');
+        const dEl=document.getElementById('damage-overlay');
+        if(dEl){dEl.style.background='radial-gradient(ellipse,rgba(255,200,0,0.4) 10%,transparent 70%)'; dEl.style.opacity='1'; setTimeout(()=>{dEl.style.opacity='0';setTimeout(()=>dEl.style.background='',500);},500);}
+        if(audioCtxSFX){const ctx=audioCtxSFX,t=ctx.currentTime,out=_sfxGain||ctx.destination;
+            [0,0.14,0.28,0.42,0.56,0.70].forEach((off,i)=>{
+                const o=ctx.createOscillator();o.type='sine';o.frequency.value=440*Math.pow(2,i/7);
+                const g=ctx.createGain();g.gain.setValueAtTime(0.14,t+off);g.gain.exponentialRampToValueAtTime(0.001,t+off+0.4);
+                o.connect(g);g.connect(out);o.start(t+off);o.stop(t+off+0.42);
+            });}
+        const apexEl=document.getElementById('apex-reward-msg');
+        if(apexEl){apexEl.style.display='block';apexEl.style.opacity='1';
+            setTimeout(()=>{apexEl.style.opacity='0';setTimeout(()=>apexEl.style.display='none',600);},5000);}
+        showLootMessage('💎 APEX KRİSTALİ! +2500 KRD | ZAMAN BÜKÜM→8s | ARANAN TEMİZLENDİ','#ffd700');
+    }
 
     const playerGeo = new THREE.BoxGeometry(1.2, 2.4, 1.2); const playerMat = new THREE.MeshBasicMaterial({ color: glowCyan, wireframe: true });
     const playerMesh = new THREE.Mesh(playerGeo, playerMat); playerMesh.position.set(0, 0.2, 0); scene.add(playerMesh);
@@ -3365,8 +3737,8 @@ window.onload = function() {
             cityLife.rainLines.forEach(line => { line.visible = false; });
             setRainAmbient(0);
         }
-        roadMat.roughness = Math.max(0.82, 0.97 - wetBoost * 0.12);
-        roadMat.metalness = 0.0; // speküler parlama yok — ıslak görünüm puddle mesh'lerinden gelir
+        roadMat.roughness = Math.max(0.88, 0.96 - wetBoost * 0.06);
+        roadMat.metalness = 0.0; // ıslak görünüm puddle mesh'lerinden gelir
         cityLife.wetSurfaces.forEach((m, i) => {
             m.material.opacity = 0.035 + wetBoost * (0.08 + (Math.sin(now*0.003 + i) * 0.015));
         });
@@ -4899,11 +5271,13 @@ window.onload = function() {
         // Datarun kovalama sırasında her zaman kullanılabilsin
         if(GAME.timeScale !== 1.0 && !GAME.datarunChasing) return;
         if(GAME.timeScale !== 1.0) return; // Zaten yavaş zamanda tekrar tetikleme
-        GAME.timeScale = 0.2; let hackOverlay = document.getElementById('hack-overlay');
+        GAME.timeScale = 0.2;
+        const _btDur = GAME._btDuration || 4000;
+        let hackOverlay = document.getElementById('hack-overlay');
         if(hackOverlay) {
             hackOverlay.style.boxShadow = "inset 0 0 100px rgba(0,255,255,0.3)"; hackOverlay.style.background = "rgba(0, 255, 255, 0.1)"; hackOverlay.style.opacity = 1;
-            setTimeout(() => { GAME.timeScale = 1.0; hackOverlay.style.opacity = 0; setTimeout(() => { hackOverlay.style.boxShadow = "inset 0 0 50px rgba(0,255,0,0.3)"; hackOverlay.style.background = "rgba(0, 255, 0, 0.1)"; }, 300); }, 4000); 
-        } else { setTimeout(() => { GAME.timeScale = 1.0; }, 4000); }
+            setTimeout(() => { GAME.timeScale = 1.0; hackOverlay.style.opacity = 0; setTimeout(() => { hackOverlay.style.boxShadow = "inset 0 0 50px rgba(0,255,0,0.3)"; hackOverlay.style.background = "rgba(0, 255, 0, 0.1)"; }, 300); }, _btDur);
+        } else { setTimeout(() => { GAME.timeScale = 1.0; }, _btDur); }
     }
     let btnAbility = document.getElementById('btn-ability'); if(btnAbility) btnAbility.addEventListener('click', toggleBulletTime);
 
@@ -5188,7 +5562,17 @@ window.onload = function() {
                         // geniş bir düşme toleransı kullanılır.
                         if(isOnRail(_px, _pz) && RAIL_Y <= _py + 35 && RAIL_Y > bestGroundY) {
                             bestGroundY = RAIL_Y;
-                            _onRooftopSurface = false; // ray bir teras değil, sniper perk yok
+                            _onRooftopSurface = false;
+                        }
+                        // Parkur platformları — büyük düşme toleransı (yüksekten atlama)
+                        for(let pp of _PARKOUR_PLATS) {
+                            const hw=pp.w*0.5+0.3, hd=pp.d*0.5+0.3;
+                            if(_px>pp.x-hw && _px<pp.x+hw && _pz>pp.z-hd && _pz<pp.z+hd) {
+                                const topY=pp.y+0.175+0.2;
+                                if(topY<=_py+8 && topY>bestGroundY) {
+                                    bestGroundY=topY; _onRooftopSurface=true;
+                                }
+                            }
                         }
                     }
                     GAME.groundY = bestGroundY;
@@ -5266,6 +5650,7 @@ window.onload = function() {
         }
             if(GAME.taxiActive) updateTaxiMission(gameDt, now);
             else if(GAME.isDriving && GAME.currentVehicle !== taxiCar && GAME.taxiActive) cancelTaxiMission();
+            updateParkourSystem(gameDt, now, playerMesh.position);
             // BİNA GİRİŞ YAKLAŞIM PROMPT
             if(!GAME.isDriving && !GAME.metroRiding) {
                 let nearEntry = null;
