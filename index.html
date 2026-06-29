@@ -3222,8 +3222,8 @@ window.onload = function() {
         let isVert=Math.random()>0.5; let rIdx=Math.floor(Math.random()*9)-4;
         let rCoord=rIdx*gridStep; let off=Math.random()>0.5?5:-5;
         cg.isVertical=isVert; cg.direction=off>0?1:-1; cg.isPlayerDriven=false; cg.isParked=false;
-        if(isVert){cg.position.x=rCoord+off;cg.position.z=(Math.random()-0.5)*500;if(cg.direction===-1)cg.rotation.y=Math.PI;}
-        else{cg.position.z=rCoord+off;cg.position.x=(Math.random()-0.5)*500;cg.rotation.y=cg.direction===1?Math.PI/2:-Math.PI/2;}
+        if(isVert){cg.position.x=rCoord+off;cg.position.z=(Math.random()-0.5)*500;if(cg.direction===1)cg.rotation.y=Math.PI;}
+        else{cg.position.z=rCoord+off;cg.position.x=(Math.random()-0.5)*500;cg.rotation.y=cg.direction===1?-Math.PI/2:Math.PI/2;}
         scene.add(cg); vehicles.push(cg);
     }
 
@@ -6053,12 +6053,18 @@ window.onload = function() {
                     if(GAME.weaponSlot === 2 && GAME.onRooftop) {
                         if(now - GAME.lastShot > 900) {
                             let dir = new THREE.Vector3(0,0,-1).applyQuaternion(camera.quaternion);
-                            shoot(camera.position.clone(), dir, true, 400); // sniper: 2x hız
+                            const origin = camera.position.clone().add(dir.clone().multiplyScalar(0.8));
+                            shoot(origin, dir, true, 400);
                             sniperShoot();
                             GAME.lastShot = now;
                         }
                     } else if(GAME.weaponSlot === 1) {
-                        if(now - GAME.lastShot > 150) { let dir = new THREE.Vector3(0, 0, -1).applyQuaternion(camera.quaternion); shoot(camera.position.clone(), dir, true); GAME.lastShot = now; }
+                        if(now - GAME.lastShot > 150) {
+                            let dir = new THREE.Vector3(0, 0, -1).applyQuaternion(camera.quaternion);
+                            const origin = camera.position.clone().add(dir.clone().multiplyScalar(0.8));
+                            shoot(origin, dir, true);
+                            GAME.lastShot = now;
+                        }
                     }
                 }
                 if (GAME.mode === 'RTS') {
@@ -6325,31 +6331,43 @@ window.onload = function() {
             if(coordDisplay) coordDisplay.innerText = `${Math.floor(playerMesh.position.x)}, ${Math.floor(playerMesh.position.z)}`;
             
             for (let i = projectiles.length - 1; i >= 0; i--) {
-                let p = projectiles[i]; let pVel = p.velocity.clone(); p.position.add(pVel.multiplyScalar(gameDt)); p.life -= gameDt; let hit = false;
+                let p = projectiles[i];
+                // Süpürme tabanlı çarpışma (yüksek hızda tunneling engeli)
+                const pPrev = p.position.clone();
+                let pVel = p.velocity.clone(); p.position.add(pVel.multiplyScalar(gameDt)); p.life -= gameDt; let hit = false;
+                const pStep = p.position.clone().sub(pPrev); // bu frame'de alınan yol vektörü
+                const pStepLen = pStep.length();
                 if(p.position.y < -1 || checkCollision(p.position, 0.3)) hit = true;
                 else {
                     if(p.isPlayer) {
+                        const pDir = pStepLen > 0 ? pStep.clone().divideScalar(pStepLen) : new THREE.Vector3(0,0,-1);
                         for(let j=enemies.length-1; j>=0; j--) {
-                            if(p.position.distanceTo(enemies[j].position) < 1.5) {
+                            // Süpürme: noktadan segmente en yakın mesafe (tunneling koruması)
+                            const toEnemy = enemies[j].position.clone().sub(pPrev);
+                            const t = Math.max(0, Math.min(pStepLen, toEnemy.dot(pDir)));
+                            const closest = pPrev.clone().add(pDir.clone().multiplyScalar(t));
+                            if(closest.distanceTo(enemies[j].position) < 2.0) {
                                 const target = enemies[j];
                                 const dmg = (GAME.mode === 'FPS' ? 50 : 34);
                                 target.hp -= dmg; hit = true;
                                 const isKillShot = target.hp <= 0;
                                 const hitDir = p.velocity.clone().normalize();
-                                const hitPos = p.position.clone();
+                                const hitPos = closest.clone();
                                 if(!target.isInfected) registerHit(target, hitPos, hitDir, p._isSniper, isKillShot);
                                 if(isKillShot) { let deathPos = target.position.clone(); scene.remove(target); enemies.splice(j, 1); onEnemyKilled(deathPos); } break;
                             }
                         }
                         if (!hit) {
                             for(let j=civilians.length-1; j>=0; j--) {
-                                if(p.position.distanceTo(civilians[j].position) < 1.5) {
+                                const toC = civilians[j].position.clone().sub(pPrev);
+                                const t = Math.max(0, Math.min(pStepLen, toC.dot(pDir)));
+                                const closest = pPrev.clone().add(pDir.clone().multiplyScalar(t));
+                                if(closest.distanceTo(civilians[j].position) < 2.0) {
                                     const target = civilians[j];
-                                    civilians[j].hp -= (GAME.mode === 'FPS' ? 100 : 50); hit = true; 
+                                    civilians[j].hp -= (GAME.mode === 'FPS' ? 100 : 50); hit = true;
                                     const isKillShot = civilians[j].hp <= 0;
                                     const hitDir = p.velocity.clone().normalize();
-                                    const hitPos = p.position.clone();
-                                    registerHit(target, hitPos, hitDir, p._isSniper, isKillShot);
+                                    registerHit(target, closest.clone(), hitDir, p._isSniper, isKillShot);
                                     if(isKillShot) {
                                         let isBounty = civilians[j].isBountyTarget;
                                         scene.remove(civilians[j]); civilians.splice(j, 1);
